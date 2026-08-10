@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upcoming Events Strip</title>
+<style>
+  /* ============================================================
+     bc-events — Homepage Upcoming Events Strip
+     Component 1 of 2 (events system). Self-contained: paste the
+     full <body> contents into an Elementor "HTML" widget, or embed
+     the whole file for standalone testing.
+     ============================================================ */
+
+  .bc-events {
+    background-color: #EFEBE3;
+    padding: 96px 24px;
+    box-sizing: border-box;
+  }
+
+  .bc-events *,
+  .bc-events *::before,
+  .bc-events *::after {
+    box-sizing: border-box;
+  }
+
+  .bc-events__container {
+    max-width: 1240px;
+    margin: 0 auto;
+  }
+
+  .bc-events__heading {
+    font-family: "Neue Haas Display Bold", "Neue Haas Display Medium", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 44px;
+    line-height: 1.1;
+    color: #000000;
+    margin: 0 0 48px 0;
+  }
+
+  .bc-events__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+
+  .bc-events__card {
+    background-color: #FBF8F4;
+    border: 1px solid #EFEBE3;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .bc-events__image-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: #EFEBE3;
+  }
+
+  .bc-events__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bc-events__body {
+    padding: 24px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .bc-events__date {
+    font-family: "Neue Haas Display Light", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #98C0B4;
+    margin: 0 0 10px 0;
+  }
+
+  .bc-events__title {
+    font-family: "Neue Haas Display Medium", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.25;
+    color: #000000;
+    margin: 0 0 12px 0;
+  }
+
+  .bc-events__description {
+    font-family: "Neue Haas Display Light", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #000000;
+    opacity: 0.65;
+    margin: 0 0 20px 0;
+    flex: 1;
+  }
+
+  .bc-events__link {
+    font-family: "Neue Haas Display Roman", "Neue Haas Display Regular", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #386641;
+    text-decoration: none;
+    border-bottom: 1px solid #386641;
+    align-self: flex-start;
+    padding-bottom: 2px;
+    transition: opacity 0.15s ease;
+  }
+
+  .bc-events__link:hover,
+  .bc-events__link:focus-visible {
+    opacity: 0.7;
+  }
+
+  .bc-events__footer {
+    text-align: center;
+    margin-top: 56px;
+  }
+
+  .bc-events__view-all {
+    font-family: "Neue Haas Display Roman", "Neue Haas Display Regular", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #386641;
+    text-decoration: none;
+    border-bottom: 1px solid #386641;
+    padding-bottom: 2px;
+    display: inline-block;
+    transition: opacity 0.15s ease;
+  }
+
+  .bc-events__view-all:hover,
+  .bc-events__view-all:focus-visible {
+    opacity: 0.7;
+  }
+
+  .bc-events__empty {
+    font-family: "Neue Haas Display Light", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    color: #000000;
+    opacity: 0.65;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 32px 0;
+  }
+
+  @media (max-width: 900px) {
+    .bc-events__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .bc-events {
+      padding: 48px 20px;
+    }
+
+    .bc-events__heading {
+      font-size: 32px;
+      margin-bottom: 32px;
+    }
+
+    .bc-events__grid {
+      gap: 24px;
+    }
+
+    .bc-events__footer {
+      margin-top: 40px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<section class="bc-events">
+  <div class="bc-events__container">
+    <h2 class="bc-events__heading">Upcoming Events</h2>
+    <div class="bc-events__grid" id="bc-events-grid"></div>
+    <div class="bc-events__footer">
+      <a class="bc-events__view-all" href="https://example.org/calendar" id="bc-events-view-all">View All Events</a>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  /* ============================================================
+     EDIT EVENTS HERE. This is the only place anyone needs to
+     touch to add, remove, or update events.
+
+     Fields per event:
+       title       - string
+       date        - "YYYY-MM-DD"
+       time        - display string, e.g. "9:00 AM"
+       description - short string, one or two sentences
+       image       - URL to a 16:9 (or croppable) photo
+       link        - URL the "Learn More" link points to
+
+     Events whose date has already passed are automatically
+     hidden. Of the remaining upcoming events, only the soonest
+     3 are shown (sorted by date, ascending). Update the
+     calendar link below to point at the church's real Calendar
+     page when it exists.
+     ============================================================ */
+
+  var BC_CALENDAR_URL = "https://example.org/calendar"; // TODO: replace with real Calendar page URL
+
+  var BC_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="338" viewBox="0 0 600 338">' +
+    '<rect width="600" height="338" fill="#EFEBE3"/>' +
+    '<defs><pattern id="stripes" width="28" height="28" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+    '<rect width="14" height="28" fill="#E4DFD4"/></pattern></defs>' +
+    '<rect width="600" height="338" fill="url(#stripes)"/>' +
+    '<text x="300" y="174" font-family="Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" ' +
+    'fill="#8A8578" text-anchor="middle" dominant-baseline="middle">EVENT PHOTO</text>' +
+    '</svg>'
+  );
+
+  var BC_EVENTS = [
+    {
+      title: "Family Worship Gathering",
+      date: "2026-08-16",
+      time: "9:00 AM",
+      description: "Join us for a morning of worship, teaching, and community in the main sanctuary.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/family-worship-gathering"
+    },
+    {
+      title: "Midweek Bible Study",
+      date: "2026-08-19",
+      time: "6:30 PM",
+      description: "A verse-by-verse study through the book of Philippians, open to everyone.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/midweek-bible-study"
+    },
+    {
+      title: "Community Serve Day",
+      date: "2026-08-22",
+      time: "8:00 AM",
+      description: "Serve alongside neighbors at three project sites across the city.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/community-serve-day"
+    },
+    {
+      title: "Young Adults Cookout",
+      date: "2026-09-05",
+      time: "5:00 PM",
+      description: "Food, games, and connection for young adults at the church pavilion.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/young-adults-cookout"
+    },
+    {
+      title: "Women's Fall Retreat",
+      date: "2026-09-26",
+      time: "9:00 AM",
+      description: "A weekend of rest, worship, and fellowship for women of all ages.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/womens-fall-retreat"
+    },
+    {
+      title: "Fall Festival & Trunk-or-Treat",
+      date: "2026-10-24",
+      time: "4:00 PM",
+      description: "A family-friendly evening of games, candy, and community on the front lawn.",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/fall-festival"
+    }
+  ];
+
+  /* ============================================================
+     DO NOT EDIT BELOW THIS LINE — rendering logic
+     ============================================================ */
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function parseEventDate(ev) {
+    var parts = ev.date.split("-");
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+
+  function formatDateLabel(ev) {
+    var d = parseEventDate(ev);
+    var formatted = d.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric"
+    });
+    return formatted.toUpperCase() + " · " + ev.time;
+  }
+
+  function getUpcomingEvents(events) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return events
+      .filter(function (ev) {
+        return parseEventDate(ev) >= today;
+      })
+      .sort(function (a, b) {
+        return parseEventDate(a) - parseEventDate(b);
+      })
+      .slice(0, 3);
+  }
+
+  function renderEvents() {
+    var grid = document.getElementById("bc-events-grid");
+    var upcoming = getUpcomingEvents(BC_EVENTS);
+
+    if (upcoming.length === 0) {
+      grid.innerHTML = '<p class="bc-events__empty">No upcoming events right now. Check back soon.</p>';
+      return;
+    }
+
+    grid.innerHTML = upcoming.map(function (ev) {
+      return (
+        '<article class="bc-events__card">' +
+          '<div class="bc-events__image-wrap">' +
+            '<img class="bc-events__image" src="' + escapeHtml(ev.image) + '" alt="' + escapeHtml(ev.title) + '" loading="lazy">' +
+          '</div>' +
+          '<div class="bc-events__body">' +
+            '<p class="bc-events__date">' + escapeHtml(formatDateLabel(ev)) + '</p>' +
+            '<h3 class="bc-events__title">' + escapeHtml(ev.title) + '</h3>' +
+            '<p class="bc-events__description">' + escapeHtml(ev.description) + '</p>' +
+            '<a class="bc-events__link" href="' + escapeHtml(ev.link) + '">Learn More</a>' +
+          '</div>' +
+        '</article>'
+      );
+    }).join("");
+  }
+
+  document.getElementById("bc-events-view-all").setAttribute("href", BC_CALENDAR_URL);
+  renderEvents();
+})();
+</script>
+
+</body>
+</html>
