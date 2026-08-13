@@ -162,6 +162,147 @@
       margin-top: 40px;
     }
   }
+
+  /* ---- Learn More modal: expanded version of the card ---- */
+
+  .bc-events__modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 9999;
+  }
+
+  .bc-events__modal-overlay.is-open {
+    display: flex;
+  }
+
+  .bc-events__modal {
+    background-color: #FBF8F4;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid #EFEBE3;
+  }
+
+  .bc-events__modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: rgba(251, 248, 244, 0.9);
+    color: #000000;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s ease;
+    z-index: 1;
+  }
+
+  .bc-events__modal-close:hover,
+  .bc-events__modal-close:focus-visible {
+    opacity: 0.6;
+  }
+
+  .bc-events__modal-image-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: #EFEBE3;
+  }
+
+  .bc-events__modal-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bc-events__modal-body {
+    padding: 32px;
+  }
+
+  .bc-events__modal-date {
+    font-family: "Neue Haas Display Light", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #98C0B4;
+    margin: 0 0 10px 0;
+  }
+
+  .bc-events__modal-title {
+    font-family: "Neue Haas Display Medium", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1.2;
+    color: #000000;
+    margin: 0 0 12px 0;
+  }
+
+  .bc-events__modal-location {
+    font-family: "Neue Haas Display Roman", "Neue Haas Display Regular", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #000000;
+    opacity: 0.65;
+    margin: 0 0 16px 0;
+  }
+
+  .bc-events__modal-description {
+    font-family: "Neue Haas Display Light", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #000000;
+    opacity: 0.8;
+    margin: 0 0 28px 0;
+    white-space: pre-line;
+  }
+
+  .bc-events__modal-cta {
+    font-family: "Neue Haas Display Roman", "Neue Haas Display Regular", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #386641;
+    text-decoration: none;
+    border-bottom: 1px solid #386641;
+    padding-bottom: 2px;
+    display: inline-block;
+    transition: opacity 0.15s ease;
+  }
+
+  .bc-events__modal-cta:hover,
+  .bc-events__modal-cta:focus-visible {
+    opacity: 0.7;
+  }
+
+  body.bc-events-modal-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .bc-events__modal-body {
+      padding: 24px;
+    }
+
+    .bc-events__modal-title {
+      font-size: 24px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -175,6 +316,22 @@
   </div>
 </section>
 
+<div class="bc-events__modal-overlay" id="bc-events-modal-overlay" aria-hidden="true">
+  <div class="bc-events__modal" id="bc-events-modal" role="dialog" aria-modal="true" aria-labelledby="bc-events-modal-title" tabindex="-1">
+    <button type="button" class="bc-events__modal-close" id="bc-events-modal-close" aria-label="Close">&times;</button>
+    <div class="bc-events__modal-image-wrap">
+      <img class="bc-events__modal-image" id="bc-events-modal-image" src="" alt="">
+    </div>
+    <div class="bc-events__modal-body">
+      <p class="bc-events__modal-date" id="bc-events-modal-date"></p>
+      <h3 class="bc-events__modal-title" id="bc-events-modal-title"></h3>
+      <p class="bc-events__modal-location" id="bc-events-modal-location"></p>
+      <p class="bc-events__modal-description" id="bc-events-modal-description"></p>
+      <a class="bc-events__modal-cta" id="bc-events-modal-cta" href="" target="_blank" rel="noopener"></a>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   /* ============================================================
@@ -184,10 +341,14 @@
      Fields per event:
        title       - string
        date        - "YYYY-MM-DD"
-       time        - display string, e.g. "9:00 AM"
-       description - short string, one or two sentences
+       time        - display string, e.g. "7:00 - 9:00 PM"
+       description - short string shown on the card (one or two sentences)
        image       - URL to a 16:9 (or croppable) photo
-       link        - URL the "Learn More" link points to
+       link        - URL the "Learn More" modal's CTA button points to
+       location    - optional, e.g. "Student Center" (omit or "" to hide)
+       details     - optional longer text for the "Learn More" modal;
+                     falls back to `description` if omitted
+       ctaLabel    - optional button label in the modal, defaults to "Register"
 
      Events whose date has already passed are automatically
      hidden. Of the remaining upcoming events, only the soonest
@@ -211,52 +372,83 @@
 
   var BC_EVENTS = [
     {
-      title: "Family Worship Gathering",
-      date: "2026-08-16",
-      time: "9:00 AM",
-      description: "Join us for a morning of worship, teaching, and community in the main sanctuary.",
+      title: "Undivided Nights",
+      date: "2026-08-07",
+      time: "8:00 - 10:00 PM",
+      description: "An evening of worship and teaching for students, off campus.",
+      location: "Off-Campus Venue",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/family-worship-gathering"
+      link: "https://example.org/events/undivided-nights"
     },
     {
       title: "Midweek Bible Study",
-      date: "2026-08-19",
-      time: "6:30 PM",
-      description: "A verse-by-verse study through the book of Philippians, open to everyone.",
+      date: "2026-08-13",
+      time: "7:00 - 9:00 PM",
+      description: "A verse-by-verse study through Scripture, open to everyone.",
+      details: "Join us midweek for a verse-by-verse study through Scripture. Bring your Bible and a friend — coffee and light snacks are provided, and childcare is available on request.",
+      location: "Student Center",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/midweek-bible-study"
+      link: "https://example.org/events/midweek-bible-study",
+      ctaLabel: "Register"
     },
     {
-      title: "Community Serve Day",
-      date: "2026-08-22",
-      time: "8:00 AM",
-      description: "Serve alongside neighbors at three project sites across the city.",
+      title: "Keys To Better Understand Your Bible",
+      date: "2026-08-14",
+      time: "6:30 - 7:30 PM",
+      description: "A Friday night class on tools for reading Scripture well.",
+      details: "A Friday night class covering practical tools for reading and understanding Scripture — context, translation, and study habits you can use every day.",
+      location: "Youth Room",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/community-serve-day"
+      link: "https://example.org/events/keys-to-better-understand-your-bible",
+      ctaLabel: "Register"
     },
     {
-      title: "Young Adults Cookout",
-      date: "2026-09-05",
-      time: "5:00 PM",
-      description: "Food, games, and connection for young adults at the church pavilion.",
+      title: "Undivided Nights",
+      date: "2026-08-14",
+      time: "8:00 - 10:00 PM",
+      description: "An evening of worship and teaching for students, off campus.",
+      location: "Off-Campus Venue",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/young-adults-cookout"
+      link: "https://example.org/events/undivided-nights"
     },
     {
-      title: "Women's Fall Retreat",
-      date: "2026-09-26",
-      time: "9:00 AM",
-      description: "A weekend of rest, worship, and fellowship for women of all ages.",
+      title: "Day of Prayer & Fasting",
+      date: "2026-08-15",
+      time: "All Day",
+      description: "A church-wide day set apart for prayer and fasting.",
+      details: "Join the whole church family in setting this day apart for prayer and fasting. Guides and prayer prompts will be available at the Welcome Desk.",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/womens-fall-retreat"
+      link: "https://example.org/events/day-of-prayer-and-fasting",
+      ctaLabel: "Learn More"
     },
     {
-      title: "Fall Festival & Trunk-or-Treat",
-      date: "2026-10-24",
-      time: "4:00 PM",
-      description: "A family-friendly evening of games, candy, and community on the front lawn.",
+      title: "Midweek Bible Study",
+      date: "2026-08-20",
+      time: "7:00 - 9:00 PM",
+      description: "A verse-by-verse study through Scripture, open to everyone.",
+      location: "Student Center",
       image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/fall-festival"
+      link: "https://example.org/events/midweek-bible-study",
+      ctaLabel: "Register"
+    },
+    {
+      title: "Keys To Better Understand Your Bible",
+      date: "2026-08-21",
+      time: "6:30 - 7:30 PM",
+      description: "A Friday night class on tools for reading Scripture well.",
+      location: "Youth Room",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/keys-to-better-understand-your-bible",
+      ctaLabel: "Register"
+    },
+    {
+      title: "Undivided Nights",
+      date: "2026-08-21",
+      time: "8:00 - 10:00 PM",
+      description: "An evening of worship and teaching for students, off campus.",
+      location: "Off-Campus Venue",
+      image: BC_PLACEHOLDER_IMAGE,
+      link: "https://example.org/events/undivided-nights"
     }
   ];
 
@@ -302,16 +494,19 @@
       .slice(0, 3);
   }
 
+  var currentEvents = [];
+  var lastFocusedElement = null;
+
   function renderEvents() {
     var grid = document.getElementById("bc-events-grid");
-    var upcoming = getUpcomingEvents(BC_EVENTS);
+    currentEvents = getUpcomingEvents(BC_EVENTS);
 
-    if (upcoming.length === 0) {
+    if (currentEvents.length === 0) {
       grid.innerHTML = '<p class="bc-events__empty">No upcoming events right now. Check back soon.</p>';
       return;
     }
 
-    grid.innerHTML = upcoming.map(function (ev) {
+    grid.innerHTML = currentEvents.map(function (ev, i) {
       return (
         '<article class="bc-events__card">' +
           '<div class="bc-events__image-wrap">' +
@@ -321,12 +516,78 @@
             '<p class="bc-events__date">' + escapeHtml(formatDateLabel(ev)) + '</p>' +
             '<h3 class="bc-events__title">' + escapeHtml(ev.title) + '</h3>' +
             '<p class="bc-events__description">' + escapeHtml(ev.description) + '</p>' +
-            '<a class="bc-events__link" href="' + escapeHtml(ev.link) + '">Learn More</a>' +
+            '<a class="bc-events__link" href="' + escapeHtml(ev.link) + '" data-bc-event-index="' + i + '">Learn More</a>' +
           '</div>' +
         '</article>'
       );
     }).join("");
   }
+
+  function openModal(ev) {
+    var overlay = document.getElementById("bc-events-modal-overlay");
+    var modal = document.getElementById("bc-events-modal");
+    var locationEl = document.getElementById("bc-events-modal-location");
+    var cta = document.getElementById("bc-events-modal-cta");
+
+    document.getElementById("bc-events-modal-image").setAttribute("src", ev.image);
+    document.getElementById("bc-events-modal-image").setAttribute("alt", ev.title);
+    document.getElementById("bc-events-modal-date").textContent = formatDateLabel(ev);
+    document.getElementById("bc-events-modal-title").textContent = ev.title;
+    document.getElementById("bc-events-modal-description").textContent = ev.details || ev.description;
+
+    if (ev.location) {
+      locationEl.textContent = ev.location;
+      locationEl.style.display = "";
+    } else {
+      locationEl.textContent = "";
+      locationEl.style.display = "none";
+    }
+
+    cta.setAttribute("href", ev.link);
+    cta.textContent = ev.ctaLabel || "Register";
+
+    lastFocusedElement = document.activeElement;
+    overlay.classList.add("is-open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("bc-events-modal-open");
+    modal.focus();
+    document.addEventListener("keydown", onModalKeydown);
+  }
+
+  function closeModal() {
+    var overlay = document.getElementById("bc-events-modal-overlay");
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("bc-events-modal-open");
+    document.removeEventListener("keydown", onModalKeydown);
+    if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+      lastFocusedElement.focus();
+    }
+  }
+
+  function onModalKeydown(e) {
+    if (e.key === "Escape") {
+      closeModal();
+    }
+  }
+
+  document.getElementById("bc-events-grid").addEventListener("click", function (e) {
+    var link = e.target.closest(".bc-events__link");
+    if (!link) {
+      return;
+    }
+    e.preventDefault();
+    var index = Number(link.getAttribute("data-bc-event-index"));
+    openModal(currentEvents[index]);
+  });
+
+  document.getElementById("bc-events-modal-close").addEventListener("click", closeModal);
+
+  document.getElementById("bc-events-modal-overlay").addEventListener("click", function (e) {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  });
 
   document.getElementById("bc-events-view-all").setAttribute("href", BC_CALENDAR_URL);
   renderEvents();
