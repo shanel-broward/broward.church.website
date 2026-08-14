@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Values</title>
+<style>
+  /* ============================================================
+     bc-values — About Us "Our Values" drifting bands
+     Design ref: handoff "Our Values — drifting bands (option 1e)".
+     Self-contained: paste the full <body> contents into an
+     Elementor "HTML" widget, or embed the whole file for
+     standalone testing. CSS-only — no JS.
+     ============================================================ */
+
+  /* Eyebrow serif: prefer the site's existing serif if the page
+     already loads one — this @import is only a Google Fonts
+     stand-in for EB Garamond, matching the design reference. */
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&display=swap');
+
+  /* Neue Haas Grotesk Light is a licensed face, not on Google
+     Fonts. Supply the licensed webfont files and update the src
+     paths below — do not synthesize the light weight. Until then
+     this silently falls through to Helvetica Neue 300. */
+  @font-face {
+    font-family: 'Neue Haas Grotesk Display Pro';
+    src: url('../fonts/NeueHaasDisplayPro-45Light.woff2') format('woff2'),
+         url('../fonts/NeueHaasDisplayPro-45Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  :root {
+    /* Placeholder textures: subtle SVG paper-grain in each tone's
+       exact hex from the design doc. Swap for the real
+       01-cream.png … 06-brown.png (WebP/AVIF + PNG fallback) by
+       replacing each url() below — nothing else needs to change. */
+    --bc-values-tex-cream: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23F2ECE0'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --bc-values-tex-sand: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23CDBFA4'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --bc-values-tex-ochre: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23C0A768'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --bc-values-tex-terracotta: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23BF5B2D'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --bc-values-tex-charcoal: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23454340'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --bc-values-tex-brown: url("data:image/svg+xml,%3Csvg xmlns='http%3A//www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%2366493C'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .bc-values {
+    background-color: #F4EEE3;
+    padding: 88px 0 96px;
+    overflow: hidden; /* clips the off-screen half of each marquee track — required */
+  }
+
+  .bc-values,
+  .bc-values *,
+  .bc-values *::before,
+  .bc-values *::after {
+    box-sizing: border-box;
+  }
+
+  .bc-values__heading-block {
+    margin: 0 96px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bc-values__eyebrow {
+    margin: 0;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: #7A7167;
+  }
+
+  .bc-values__heading {
+    margin: 0;
+    font-family: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    font-size: 64px;
+    letter-spacing: -0.02em;
+    color: #24211E;
+  }
+
+  .bc-values__marquee {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bc-values__track {
+    display: flex;
+    width: max-content;
+    gap: 20px;
+    animation: bc-values-marquee-l 46s linear infinite;
+  }
+
+  .bc-values__track:hover {
+    animation-play-state: paused;
+  }
+
+  .bc-values__track--right {
+    animation-name: bc-values-marquee-r;
+    animation-duration: 44s;
+  }
+
+  /* Translating a duplicated flex track by -50% overshoots by half
+     the inter-half gap (a visible jump each loop) — translate by
+     half the track gap less instead. If the track gap above ever
+     changes from 20px, update the 10px here to match. */
+  @keyframes bc-values-marquee-l {
+    from { transform: translateX(0); }
+    to   { transform: translateX(calc(-50% - 10px)); }
+  }
+
+  @keyframes bc-values-marquee-r {
+    from { transform: translateX(calc(-50% - 10px)); }
+    to   { transform: translateX(0); }
+  }
+
+  .bc-values__card {
+    flex: none;
+    width: var(--w);
+    height: 250px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--fallback); /* shows if the texture image fails to load */
+    background-image: var(--tex);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
+  .bc-values__value {
+    margin: 0;
+    max-width: 100%;
+    font-family: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    font-size: 27px;
+    line-height: 1.26;
+    text-align: left; /* the block is centered in the tile; the text inside stays left-justified */
+    text-wrap: pretty;
+    color: var(--c);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bc-values__track {
+      animation: none !important;
+      transform: none !important;
+    }
+    .bc-values__card--dup {
+      display: none; /* each track is 2x its row's cards; hide the duplicate half so nothing repeats when static */
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .bc-values__heading-block { margin: 0 48px 40px; }
+    .bc-values__heading { font-size: 48px; }
+    .bc-values__card { height: 220px; padding: 28px; }
+    .bc-values__value { font-size: 24px; }
+  }
+
+  @media (max-width: 767px) {
+    .bc-values { padding: 56px 0 64px; }
+    .bc-values__heading-block { margin: 0 24px 32px; }
+    .bc-values__heading { font-size: 36px; }
+    .bc-values__card { width: min(78vw, 340px); height: auto; min-height: 200px; }
+    .bc-values__value { font-size: 21px; }
+    .bc-values__track { animation-duration: 23s; }
+    .bc-values__track--right { animation-duration: 22s; }
+  }
+</style>
+</head>
+<body>
+
+<section class="bc-values">
+  <div class="bc-values__heading-block">
+    <p class="bc-values__eyebrow">The Culture We&rsquo;re Creating</p>
+    <h2 class="bc-values__heading">Our Values</h2>
+  </div>
+
+  <div class="bc-values__marquee">
+    <!-- Row 1: values 01–05, duplicated once for a seamless loop -->
+    <div class="bc-values__track">
+      <div class="bc-values__card" style="--w:404px; --tex:var(--bc-values-tex-sand); --fallback:#CDBFA4; --c:#2B2721;">
+        <p class="bc-values__value">We are, first and foremost, disciples of Jesus.</p>
+      </div>
+      <div class="bc-values__card" style="--w:404px; --tex:var(--bc-values-tex-cream); --fallback:#F2ECE0; --c:#2B2721;">
+        <p class="bc-values__value">We honor Christ and His church with excellence.</p>
+      </div>
+      <!-- Copy reconstructed from a truncated screenshot in the design handoff — confirm before ship -->
+      <div class="bc-values__card" style="--w:484px; --tex:var(--bc-values-tex-terracotta); --fallback:#BF5B2D; --c:#FCF6EC;">
+        <p class="bc-values__value">We are Matthew 28 people, committed to making disciples and teaching them everything Jesus commanded.</p>
+      </div>
+      <div class="bc-values__card" style="--w:404px; --tex:var(--bc-values-tex-charcoal); --fallback:#454340; --c:#F4EEE3;">
+        <p class="bc-values__value">We are a counterculture.</p>
+      </div>
+      <div class="bc-values__card" style="--w:404px; --tex:var(--bc-values-tex-ochre); --fallback:#C0A768; --c:#2B2721;">
+        <p class="bc-values__value">We are a church not for ourselves.</p>
+      </div>
+
+      <div class="bc-values__card bc-values__card--dup" style="--w:404px; --tex:var(--bc-values-tex-sand); --fallback:#CDBFA4; --c:#2B2721;" aria-hidden="true">
+        <p class="bc-values__value">We are, first and foremost, disciples of Jesus.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:404px; --tex:var(--bc-values-tex-cream); --fallback:#F2ECE0; --c:#2B2721;" aria-hidden="true">
+        <p class="bc-values__value">We honor Christ and His church with excellence.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:484px; --tex:var(--bc-values-tex-terracotta); --fallback:#BF5B2D; --c:#FCF6EC;" aria-hidden="true">
+        <p class="bc-values__value">We are Matthew 28 people, committed to making disciples and teaching them everything Jesus commanded.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:404px; --tex:var(--bc-values-tex-charcoal); --fallback:#454340; --c:#F4EEE3;" aria-hidden="true">
+        <p class="bc-values__value">We are a counterculture.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:404px; --tex:var(--bc-values-tex-ochre); --fallback:#C0A768; --c:#2B2721;" aria-hidden="true">
+        <p class="bc-values__value">We are a church not for ourselves.</p>
+      </div>
+    </div>
+
+    <!-- Row 2: values 06–09, duplicated once for a seamless loop -->
+    <div class="bc-values__track bc-values__track--right">
+      <div class="bc-values__card" style="--w:444px; --tex:var(--bc-values-tex-brown); --fallback:#66493C; --c:#F4EEE3;">
+        <p class="bc-values__value">We wholeheartedly reject the clergy/laity separation.</p>
+      </div>
+      <div class="bc-values__card" style="--w:404px; --tex:var(--bc-values-tex-cream); --fallback:#F2ECE0; --c:#2B2721;">
+        <p class="bc-values__value">We are faith-filled, big-thinking, risk takers.</p>
+      </div>
+      <div class="bc-values__card" style="--w:444px; --tex:var(--bc-values-tex-sand); --fallback:#CDBFA4; --c:#2B2721;">
+        <p class="bc-values__value">We are imitators of our Heavenly Father in our creativity.</p>
+      </div>
+      <div class="bc-values__card" style="--w:444px; --tex:var(--bc-values-tex-charcoal); --fallback:#454340; --c:#F4EEE3;">
+        <p class="bc-values__value">We savor the &ldquo;life to the full&rdquo; offered by Jesus.</p>
+      </div>
+
+      <div class="bc-values__card bc-values__card--dup" style="--w:444px; --tex:var(--bc-values-tex-brown); --fallback:#66493C; --c:#F4EEE3;" aria-hidden="true">
+        <p class="bc-values__value">We wholeheartedly reject the clergy/laity separation.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:404px; --tex:var(--bc-values-tex-cream); --fallback:#F2ECE0; --c:#2B2721;" aria-hidden="true">
+        <p class="bc-values__value">We are faith-filled, big-thinking, risk takers.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:444px; --tex:var(--bc-values-tex-sand); --fallback:#CDBFA4; --c:#2B2721;" aria-hidden="true">
+        <p class="bc-values__value">We are imitators of our Heavenly Father in our creativity.</p>
+      </div>
+      <div class="bc-values__card bc-values__card--dup" style="--w:444px; --tex:var(--bc-values-tex-charcoal); --fallback:#454340; --c:#F4EEE3;" aria-hidden="true">
+        <p class="bc-values__value">We savor the &ldquo;life to the full&rdquo; offered by Jesus.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
