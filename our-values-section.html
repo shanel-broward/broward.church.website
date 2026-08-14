@@ -13,11 +13,6 @@
      standalone testing. CSS-only — no JS.
      ============================================================ */
 
-  /* Eyebrow serif: prefer the site's existing serif if the page
-     already loads one — this @import is only a Google Fonts
-     stand-in for EB Garamond, matching the design reference. */
-  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&display=swap');
-
   /* Neue Haas Grotesk Light is a licensed face, not on Google
      Fonts. Supply the licensed webfont files and update the src
      paths below — do not synthesize the light weight. Until then
@@ -45,7 +40,7 @@
   }
 
   .bc-values {
-    background-color: #F4EEE3;
+    background-color: transparent; /* bleeds through to whatever background the page section already has */
     padding: 88px 0 96px;
     overflow: hidden; /* clips the off-screen half of each marquee track — required */
   }
@@ -55,30 +50,6 @@
   .bc-values *::before,
   .bc-values *::after {
     box-sizing: border-box;
-  }
-
-  .bc-values__heading-block {
-    margin: 0 96px 56px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .bc-values__eyebrow {
-    margin: 0;
-    font-family: 'EB Garamond', Georgia, serif;
-    font-weight: 400;
-    font-size: 22px;
-    color: #7A7167;
-  }
-
-  .bc-values__heading {
-    margin: 0;
-    font-family: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-weight: 300;
-    font-size: 64px;
-    letter-spacing: -0.02em;
-    color: #24211E;
   }
 
   .bc-values__marquee {
@@ -92,10 +63,6 @@
     width: max-content;
     gap: 20px;
     animation: bc-values-marquee-l 46s linear infinite;
-  }
-
-  .bc-values__track:hover {
-    animation-play-state: paused;
   }
 
   .bc-values__track--right {
@@ -156,16 +123,12 @@
   }
 
   @media (max-width: 1023px) {
-    .bc-values__heading-block { margin: 0 48px 40px; }
-    .bc-values__heading { font-size: 48px; }
     .bc-values__card { height: 220px; padding: 28px; }
     .bc-values__value { font-size: 24px; }
   }
 
   @media (max-width: 767px) {
     .bc-values { padding: 56px 0 64px; }
-    .bc-values__heading-block { margin: 0 24px 32px; }
-    .bc-values__heading { font-size: 36px; }
     .bc-values__card { width: min(78vw, 340px); height: auto; min-height: 200px; }
     .bc-values__value { font-size: 21px; }
     .bc-values__track { animation-duration: 23s; }
@@ -176,11 +139,6 @@
 <body>
 
 <section class="bc-values">
-  <div class="bc-values__heading-block">
-    <p class="bc-values__eyebrow">The Culture We&rsquo;re Creating</p>
-    <h2 class="bc-values__heading">Our Values</h2>
-  </div>
-
   <div class="bc-values__marquee">
     <!-- Row 1: values 01–05, duplicated once for a seamless loop -->
     <div class="bc-values__track">
