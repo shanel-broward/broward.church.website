@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scroll Text Emphasis</title>
+<style>
+  /* ============================================================
+     bc-emphasis — Pinned scroll-emphasis text section
+     Self-contained: paste the full <body> contents into an
+     Elementor "HTML" widget, or embed the whole file for
+     standalone testing.
+
+     Behavior: the section becomes temporarily fixed (sticky) once
+     it fills the viewport. Each paragraph fades in at its own spot
+     as you scroll. Once the last paragraph has faded in, all
+     paragraphs settle to full brightness together and the section
+     unpins so the page continues scrolling normally. That fully
+     "revealed" state is then permanent — scrolling back up always
+     shows every paragraph. It only replays on a full page reload.
+     ============================================================ */
+
+  .bc-emphasis {
+    position: relative;
+  }
+
+  .bc-emphasis__pin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    background-color: #4B6B60; /* fallback color while the image loads */
+    background-image: var(--bc-emphasis-bg);
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bc-emphasis__scrim {
+    position: absolute;
+    inset: 0;
+    background-color: #000000;
+    opacity: var(--bc-emphasis-scrim-opacity, 0.18);
+    pointer-events: none;
+  }
+
+  .bc-emphasis__stage {
+    position: relative;
+    width: 100%;
+    max-width: 1240px;
+    height: 68vh;
+    margin: 0 auto;
+    padding: 0 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .bc-emphasis__line {
+    max-width: 720px;
+    margin: 0;
+    font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: clamp(22px, 2.6vw, 32px);
+    line-height: 1.4;
+    color: #ffffff;
+    opacity: 0;
+    transform: translateY(18px);
+    will-change: opacity, transform;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__line {
+    opacity: 1;
+    transform: none;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__pin {
+    position: relative;
+  }
+
+  @media (max-width: 640px) {
+    .bc-emphasis__stage {
+      height: 74vh;
+      padding: 0 20px;
+    }
+
+    .bc-emphasis__line {
+      max-width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<section class="bc-emphasis" id="bc-emphasis">
+  <div class="bc-emphasis__pin">
+    <div class="bc-emphasis__scrim"></div>
+    <div class="bc-emphasis__stage" id="bc-emphasis-stage"></div>
+  </div>
+</section>
+
+<script>
+(function () {
+  /* ============================================================
+     EDIT HERE.
+
+     BC_EMPHASIS_LINES — the paragraphs, in the order they should
+     appear as you scroll down.
+
+     BC_EMPHASIS_BG_IMAGE — URL of the background image you
+     uploaded to the WordPress Media Library (right-click the image
+     in the Media Library and copy its URL).
+
+     BC_EMPHASIS_SCRIM_OPACITY — a black overlay (0 to 1) drawn over
+     the image to keep the white text readable. Raise it if the
+     text is hard to read on a bright image; set to 0 to turn it off.
+
+     BC_EMPHASIS_DWELL_VH — how much scroll distance (in "vh", i.e.
+     viewport heights) each paragraph gets to itself before the
+     next one takes its turn. Bigger = slower/lazier scroll pacing.
+
+     BC_EMPHASIS_FADE_VH — how much of that dwell is spent fading a
+     paragraph in or out (the middle portion in between is a hold
+     at full brightness).
+
+     BC_EMPHASIS_FINALE_VH — scroll distance for the closing beat
+     where every paragraph settles to full brightness together,
+     right after the last paragraph's turn.
+     ============================================================ */
+
+  var BC_EMPHASIS_LINES = [
+    "In a world filled with noise, the influence of culture can easily become the loudest voice we hear.",
+    "So we've tuned our ears as a church to answer the call of one clear mission:",
+    "We are not building a club for consumers; we are building a city on a hill."
+  ];
+
+  var BC_EMPHASIS_BG_IMAGE = "https://github.com/shanel-broward/broward.church.website/blob/claude/elementor-scroll-text-emphasis-0ugqbh/images/background%20below%20hero%20(1).png?raw=true"; // TODO: once this branch is merged, re-upload this image to the WordPress Media Library and swap in that URL instead — a GitHub branch URL isn't a stable long-term host
+  var BC_EMPHASIS_SCRIM_OPACITY = 0.18;
+  var BC_EMPHASIS_DWELL_VH = 90;
+  var BC_EMPHASIS_FADE_VH = 22;
+  var BC_EMPHASIS_FINALE_VH = 70;
+
+  /* ============================================================
+     DO NOT EDIT BELOW THIS LINE — pin/scroll logic
+     ============================================================ */
+
+  var section = document.getElementById("bc-emphasis");
+  var pin = section.querySelector(".bc-emphasis__pin");
+  var stage = document.getElementById("bc-emphasis-stage");
+
+  section.style.setProperty("--bc-emphasis-bg", 'url("' + BC_EMPHASIS_BG_IMAGE + '")');
+  section.style.setProperty("--bc-emphasis-scrim-opacity", BC_EMPHASIS_SCRIM_OPACITY);
+
+  var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  stage.innerHTML = BC_EMPHASIS_LINES.map(function (text, i) {
+    return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + text + "</p>";
+  }).join("");
+
+  var lineEls = Array.prototype.slice.call(stage.querySelectorAll(".bc-emphasis__line"));
+
+  if (prefersReducedMotion || lineEls.length === 0) {
+    section.classList.add("bc-emphasis--reduced-motion");
+    return;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function vhToPx(vh) {
+    return (vh / 100) * window.innerHeight;
+  }
+
+  var isComplete = false;
+  var totalRunway = 0;
+  var ticking = false;
+
+  function layout() {
+    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
+    totalRunway = dwell * lineEls.length + finale;
+    section.style.height = (window.innerHeight + totalRunway) + "px";
+    render();
+  }
+
+  function soloOpacity(index, scrolled, dwell, fade) {
+    var start = index * dwell;
+    var end = start + dwell;
+    var isLast = index === lineEls.length - 1;
+
+    if (scrolled < start) {
+      return 0;
+    }
+    if (scrolled < start + fade) {
+      return (scrolled - start) / fade;
+    }
+    if (isLast || scrolled < end - fade) {
+      return 1;
+    }
+    if (scrolled < end) {
+      return 1 - (scrolled - (end - fade)) / fade;
+    }
+    return 0;
+  }
+
+  function render() {
+    if (isComplete) {
+      return;
+    }
+
+    var rect = section.getBoundingClientRect();
+    var scrolled = clamp(-rect.top, 0, totalRunway);
+    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
+    var finaleStart = dwell * lineEls.length;
+    var finaleProgress = clamp((scrolled - finaleStart) / finale, 0, 1);
+
+    lineEls.forEach(function (el, i) {
+      var opacity = Math.max(soloOpacity(i, scrolled, dwell, fade), finaleProgress);
+      el.style.opacity = opacity;
+      el.style.transform = "translateY(" + (1 - opacity) * 18 + "px)";
+    });
+
+    if (finaleProgress >= 1) {
+      isComplete = true;
+      lineEls.forEach(function (el) {
+        el.style.opacity = 1;
+        el.style.transform = "none";
+      });
+    }
+  }
+
+  function onScroll() {
+    if (ticking || isComplete) {
+      return;
+    }
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      render();
+      ticking = false;
+    });
+  }
+
+  var resizeTimer = null;
+  function onResize() {
+    if (isComplete) {
+      return;
+    }
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(layout, 150);
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onResize);
+  layout();
+})();
+</script>
+
+</body>
+</html>
