@@ -70,7 +70,7 @@
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    color: #98C0B4;
+    color: #386641;
     margin: 0 0 10px 0;
   }
 
@@ -240,7 +240,7 @@
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    color: #98C0B4;
+    color: #386641;
     margin: 0 0 10px 0;
   }
 
@@ -310,9 +310,6 @@
 <section class="bc-events">
   <div class="bc-events__container">
     <div class="bc-events__grid" id="bc-events-grid"></div>
-    <div class="bc-events__footer">
-      <a class="bc-events__view-all" href="https://example.org/calendar" id="bc-events-view-all">View All Events</a>
-    </div>
   </div>
 </section>
 
@@ -367,7 +364,7 @@
      descriptions yet. Flip it to true once details are ready.
      ============================================================ */
 
-  var BC_CALENDAR_URL = "https://example.org/calendar"; // TODO: replace with real Calendar page URL
+  var BC_CALENDAR_URL = "https://example.org/calendar"; // TODO: the "View All Events" link is removed for now; re-add its markup and point this at the real Calendar page when it comes back
   var BC_SHOW_LEARN_MORE = false; // TODO: set to true once event details/descriptions are ready
 
   var BC_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8," + encodeURIComponent(
@@ -563,7 +560,6 @@
     }
   });
 
-  document.getElementById("bc-events-view-all").setAttribute("href", BC_CALENDAR_URL);
   renderEvents();
 })();
 </script>
