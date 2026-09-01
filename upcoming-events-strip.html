@@ -340,24 +340,35 @@
 
      Fields per event:
        title       - string
-       date        - "YYYY-MM-DD"
+       date        - "YYYY-MM-DD" (the event's start date; used for sorting)
        time        - display string, e.g. "7:00 - 9:00 PM"
-       description - short string shown on the card (one or two sentences)
+       description - short string shown on the card (one or two sentences).
+                     Leave out or set to "" to show no description yet.
        image       - URL to a 16:9 (or croppable) photo
        link        - URL the "Learn More" modal's CTA button points to
        location    - optional, e.g. "Student Center" (omit or "" to hide)
        details     - optional longer text for the "Learn More" modal;
                      falls back to `description` if omitted
        ctaLabel    - optional button label in the modal, defaults to "Register"
+       endDate     - optional "YYYY-MM-DD" for multi-day events; the card
+                     stays visible until this date passes (defaults to `date`)
+       dateLabel   - optional string that replaces the auto-generated
+                     "WEEKDAY, MONTH DAY · TIME" label above the title —
+                     use this for multi-day events, e.g. "NOVEMBER 6-8, 2026"
 
      Events whose date has already passed are automatically
      hidden. Of the remaining upcoming events, only the soonest
      3 are shown (sorted by date, ascending). Update the
      calendar link below to point at the church's real Calendar
      page when it exists.
+
+     The "Learn More" link/modal is currently turned off below
+     (BC_SHOW_LEARN_MORE = false) since there's no extra info or
+     descriptions yet. Flip it to true once details are ready.
      ============================================================ */
 
   var BC_CALENDAR_URL = "https://example.org/calendar"; // TODO: replace with real Calendar page URL
+  var BC_SHOW_LEARN_MORE = false; // TODO: set to true once event details/descriptions are ready
 
   var BC_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8," + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="338" viewBox="0 0 600 338">' +
@@ -372,83 +383,29 @@
 
   var BC_EVENTS = [
     {
-      title: "Undivided Nights",
-      date: "2026-08-07",
-      time: "8:00 - 10:00 PM",
-      description: "An evening of worship and teaching for students, off campus.",
-      location: "Off-Campus Venue",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/undivided-nights"
+      title: "Worship Concert",
+      date: "2026-10-02",
+      time: "7:00 PM",
+      description: "",
+      image: BC_PLACEHOLDER_IMAGE, // TODO: replace with the worship concert photo
+      link: "https://example.org/events/worship-concert"
     },
     {
-      title: "Midweek Bible Study",
-      date: "2026-08-13",
-      time: "7:00 - 9:00 PM",
-      description: "A verse-by-verse study through Scripture, open to everyone.",
-      details: "Join us midweek for a verse-by-verse study through Scripture. Bring your Bible and a friend — coffee and light snacks are provided, and childcare is available on request.",
-      location: "Student Center",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/midweek-bible-study",
-      ctaLabel: "Register"
+      title: "Men's Advance",
+      date: "2026-11-06",
+      endDate: "2026-11-08",
+      dateLabel: "NOVEMBER 6-8, 2026 · LAKE PLACID, FL",
+      description: "",
+      image: BC_PLACEHOLDER_IMAGE, // TODO: replace with the men's advance / lake photo
+      link: "https://example.org/events/mens-advance"
     },
     {
-      title: "Keys To Better Understand Your Bible",
-      date: "2026-08-14",
-      time: "6:30 - 7:30 PM",
-      description: "A Friday night class on tools for reading Scripture well.",
-      details: "A Friday night class covering practical tools for reading and understanding Scripture — context, translation, and study habits you can use every day.",
-      location: "Youth Room",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/keys-to-better-understand-your-bible",
-      ctaLabel: "Register"
-    },
-    {
-      title: "Undivided Nights",
-      date: "2026-08-14",
-      time: "8:00 - 10:00 PM",
-      description: "An evening of worship and teaching for students, off campus.",
-      location: "Off-Campus Venue",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/undivided-nights"
-    },
-    {
-      title: "Day of Prayer & Fasting",
-      date: "2026-08-15",
-      time: "All Day",
-      description: "A church-wide day set apart for prayer and fasting.",
-      details: "Join the whole church family in setting this day apart for prayer and fasting. Guides and prayer prompts will be available at the Welcome Desk.",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/day-of-prayer-and-fasting",
-      ctaLabel: "Learn More"
-    },
-    {
-      title: "Midweek Bible Study",
-      date: "2026-08-20",
-      time: "7:00 - 9:00 PM",
-      description: "A verse-by-verse study through Scripture, open to everyone.",
-      location: "Student Center",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/midweek-bible-study",
-      ctaLabel: "Register"
-    },
-    {
-      title: "Keys To Better Understand Your Bible",
-      date: "2026-08-21",
-      time: "6:30 - 7:30 PM",
-      description: "A Friday night class on tools for reading Scripture well.",
-      location: "Youth Room",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/keys-to-better-understand-your-bible",
-      ctaLabel: "Register"
-    },
-    {
-      title: "Undivided Nights",
-      date: "2026-08-21",
-      time: "8:00 - 10:00 PM",
-      description: "An evening of worship and teaching for students, off campus.",
-      location: "Off-Campus Venue",
-      image: BC_PLACEHOLDER_IMAGE,
-      link: "https://example.org/events/undivided-nights"
+      title: "Fall Festival",
+      date: "2026-11-22",
+      time: "10:00 AM",
+      description: "",
+      image: BC_PLACEHOLDER_IMAGE, // TODO: replace with the fall festival photo
+      link: "https://example.org/events/fall-festival"
     }
   ];
 
@@ -465,19 +422,29 @@
       .replace(/'/g, "&#039;");
   }
 
-  function parseEventDate(ev) {
-    var parts = ev.date.split("-");
+  function parseDateStr(str) {
+    var parts = str.split("-");
     return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
   }
 
+  function getStartDate(ev) {
+    return parseDateStr(ev.date);
+  }
+
+  function getEndDate(ev) {
+    return parseDateStr(ev.endDate || ev.date);
+  }
+
   function formatDateLabel(ev) {
-    var d = parseEventDate(ev);
-    var formatted = d.toLocaleDateString("en-US", {
+    if (ev.dateLabel) {
+      return ev.dateLabel;
+    }
+    var formatted = getStartDate(ev).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric"
     });
-    return formatted.toUpperCase() + " · " + ev.time;
+    return formatted.toUpperCase() + (ev.time ? " · " + ev.time : "");
   }
 
   function getUpcomingEvents(events) {
@@ -486,10 +453,10 @@
 
     return events
       .filter(function (ev) {
-        return parseEventDate(ev) >= today;
+        return getEndDate(ev) >= today;
       })
       .sort(function (a, b) {
-        return parseEventDate(a) - parseEventDate(b);
+        return getStartDate(a) - getStartDate(b);
       })
       .slice(0, 3);
   }
@@ -507,6 +474,13 @@
     }
 
     grid.innerHTML = currentEvents.map(function (ev, i) {
+      var descriptionHtml = ev.description
+        ? '<p class="bc-events__description">' + escapeHtml(ev.description) + '</p>'
+        : "";
+      var linkHtml = (BC_SHOW_LEARN_MORE && ev.link)
+        ? '<a class="bc-events__link" href="' + escapeHtml(ev.link) + '" data-bc-event-index="' + i + '">Learn More</a>'
+        : "";
+
       return (
         '<article class="bc-events__card">' +
           '<div class="bc-events__image-wrap">' +
@@ -515,8 +489,8 @@
           '<div class="bc-events__body">' +
             '<p class="bc-events__date">' + escapeHtml(formatDateLabel(ev)) + '</p>' +
             '<h3 class="bc-events__title">' + escapeHtml(ev.title) + '</h3>' +
-            '<p class="bc-events__description">' + escapeHtml(ev.description) + '</p>' +
-            '<a class="bc-events__link" href="' + escapeHtml(ev.link) + '" data-bc-event-index="' + i + '">Learn More</a>' +
+            descriptionHtml +
+            linkHtml +
           '</div>' +
         '</article>'
       );
