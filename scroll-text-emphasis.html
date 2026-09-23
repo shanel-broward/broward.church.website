@@ -48,21 +48,20 @@
   }
 
   .bc-emphasis__stage {
-    /* Anchored so every beat's own vertical center lands at the same
-       spot — 40% down the viewport — no matter how tall that beat's
-       text happens to render. */
+    /* Anchored so every beat's first line always starts at the same
+       spot — 40% down the viewport — regardless of how many lines
+       that particular beat wraps to. Extra lines grow downward
+       instead of the whole block shifting to stay centered. */
     position: absolute;
     top: 40%;
     left: 0;
     right: 0;
-    transform: translateY(-50%);
     width: 100%;
-    max-width: 1240px;
     margin: 0 auto;
     padding: 0 100px;
     box-sizing: border-box;
     display: grid;
-    place-items: center;
+    place-items: start center;
   }
 
   .bc-emphasis__line,
@@ -75,7 +74,6 @@
   .bc-emphasis__line,
   .bc-emphasis__combo-fixed,
   .bc-emphasis__combo-option {
-    max-width: 800px;
     margin: 0;
     font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
     font-weight: 400;
@@ -95,7 +93,7 @@
   .bc-emphasis__combo-cycle {
     position: relative;
     display: grid;
-    place-items: center;
+    place-items: start center;
   }
 
   .bc-emphasis__combo-option {
@@ -111,7 +109,6 @@
 
   .bc-emphasis--reduced-motion .bc-emphasis__stage {
     position: static;
-    transform: none;
     height: auto;
     display: flex;
     flex-direction: column;
@@ -139,12 +136,6 @@
   @media (max-width: 640px) {
     .bc-emphasis__stage {
       padding: 0 20px;
-    }
-
-    .bc-emphasis__line,
-    .bc-emphasis__combo-fixed,
-    .bc-emphasis__combo-option {
-      max-width: 100%;
     }
   }
 </style>
