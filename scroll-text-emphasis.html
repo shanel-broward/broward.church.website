@@ -12,12 +12,13 @@
      standalone testing.
 
      Behavior: the section becomes temporarily fixed (sticky) once
-     it fills the viewport. Each paragraph fades in at its own spot
-     as you scroll. Once the last paragraph has faded in, all
-     paragraphs settle to full brightness together and the section
-     unpins so the page continues scrolling normally. That fully
-     "revealed" state is then permanent — scrolling back up always
-     shows every paragraph. It only replays on a full page reload.
+     it fills the viewport. Each paragraph fades in centered in the
+     container, holds, then fades out as the next one fades in.
+     After the last paragraph, the section unpins and the page
+     continues scrolling normally. Scrolling back up reverses the
+     same sequence: paragraphs fade in and out again in reverse
+     order, since each one's opacity is just a function of scroll
+     position — there's no separate "reset" needed.
      ============================================================ */
 
   .bc-emphasis {
@@ -53,35 +54,43 @@
     margin: 0 auto;
     padding: 0 24px;
     box-sizing: border-box;
-  }
-
-  .bc-emphasis__stage--flow {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    display: grid;
+    place-items: center;
   }
 
   .bc-emphasis__line {
+    grid-area: 1 / 1;
     max-width: 760px;
     margin: 0;
     font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
     font-weight: 400;
-    font-size: clamp(22px, 2.6vw, 32px);
+    font-size: clamp(26px, 3.1vw, 38px);
     line-height: 1.4;
     color: #ffffff;
+    text-align: center;
     opacity: 0;
     transform: translateY(18px);
     will-change: opacity, transform;
   }
 
+  .bc-emphasis--reduced-motion .bc-emphasis__pin {
+    position: relative;
+    height: auto;
+    overflow: visible;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__stage {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
 
   .bc-emphasis--reduced-motion .bc-emphasis__line {
     opacity: 1;
     transform: none;
-  }
-
-  .bc-emphasis--reduced-motion .bc-emphasis__pin {
-    position: relative;
   }
 
   @media (max-width: 640px) {
@@ -100,7 +109,7 @@
 <section class="bc-emphasis" id="bc-emphasis">
   <div class="bc-emphasis__pin">
     <div class="bc-emphasis__scrim"></div>
-    <div class="bc-emphasis__stage bc-emphasis__stage--flow" id="bc-emphasis-stage"></div>
+    <div class="bc-emphasis__stage" id="bc-emphasis-stage"></div>
   </div>
 </section>
 
@@ -131,10 +140,6 @@
      BC_EMPHASIS_GAP_VH — a blank pause, with nothing visible, between
      one paragraph finishing its fade-out and the next starting its
      fade-in, so they never overlap.
-
-     BC_EMPHASIS_FINALE_VH — scroll distance for the closing beat
-     where every paragraph settles to full brightness together,
-     right after the last paragraph's turn.
      ============================================================ */
 
   var BC_EMPHASIS_LINES = [
@@ -148,15 +153,12 @@
   var BC_EMPHASIS_DWELL_VH = 80;
   var BC_EMPHASIS_FADE_VH = 22;
   var BC_EMPHASIS_GAP_VH = 16;
-  var BC_EMPHASIS_FINALE_VH = 70;
-  var BC_EMPHASIS_RANDOM_BREAKPOINT = 640; // below this width, paragraphs stack normally instead of scattering randomly
 
   /* ============================================================
      DO NOT EDIT BELOW THIS LINE — pin/scroll logic
      ============================================================ */
 
   var section = document.getElementById("bc-emphasis");
-  var pin = section.querySelector(".bc-emphasis__pin");
   var stage = document.getElementById("bc-emphasis-stage");
 
   section.style.setProperty("--bc-emphasis-bg", 'url("' + BC_EMPHASIS_BG_IMAGE + '")');
@@ -183,70 +185,14 @@
     return (vh / 100) * window.innerHeight;
   }
 
-  function positionLines() {
-    var isRandom = window.innerWidth > BC_EMPHASIS_RANDOM_BREAKPOINT;
-    stage.classList.toggle("bc-emphasis__stage--flow", !isRandom);
-
-    if (!isRandom) {
-      lineEls.forEach(function (el) {
-        el.style.position = "";
-        el.style.top = "";
-        el.style.left = "";
-      });
-      return;
-    }
-
-    // Measure each line in normal flow first, so its real wrapped
-    // height (which depends on its own text length, at the current
-    // viewport width) is known before it's placed absolutely.
-    lineEls.forEach(function (el) {
-      el.style.position = "static";
-      el.style.top = "";
-      el.style.left = "";
-    });
-
-    var stageRect = stage.getBoundingClientRect();
-    var heights = lineEls.map(function (el) {
-      return el.getBoundingClientRect().height;
-    });
-    var totalHeight = heights.reduce(function (sum, h) { return sum + h; }, 0);
-    var slack = Math.max(0, stageRect.height - totalHeight);
-
-    // Split the leftover vertical space into random-sized gaps placed
-    // ahead of each line, so lines still land top-to-bottom in order
-    // but with organic, varying spacing — and can never overlap each
-    // other once every line is visible together at the finale.
-    var gapShares = lineEls.map(function () { return Math.random(); });
-    var shareTotal = gapShares.reduce(function (sum, s) { return sum + s; }, 0) || 1;
-
-    var cursor = 0;
-    lineEls.forEach(function (el, i) {
-      cursor += (gapShares[i] / shareTotal) * slack;
-
-      var leftRange = Math.max(0, stageRect.width - el.getBoundingClientRect().width);
-      var left = Math.random() * leftRange;
-
-      el.style.position = "absolute";
-      el.style.top = cursor + "px";
-      el.style.left = left + "px";
-
-      cursor += heights[i];
-    });
-  }
-
-  var isComplete = false;
   var totalRunway = 0;
   var segments = [];
-  var finaleStart = 0;
   var ticking = false;
 
   function layout() {
-    positionLines();
-
     var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
     var fade = vhToPx(BC_EMPHASIS_FADE_VH);
     var gap = vhToPx(BC_EMPHASIS_GAP_VH);
-    var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
 
     var cursor = 0;
     segments = lineEls.map(function (el, i) {
@@ -260,13 +206,15 @@
       cursor += dwell + (isLast ? 0 : gap);
       return seg;
     });
-    finaleStart = cursor;
-    totalRunway = finaleStart + finale;
+    totalRunway = cursor;
 
     section.style.height = (window.innerHeight + totalRunway) + "px";
     render();
   }
 
+  // A pure function of scroll position, so it's naturally reversible:
+  // scrolling down plays a line's fade-in/hold/fade-out forward,
+  // scrolling back up plays the same curve backward.
   function soloOpacity(seg, scrolled, fade, isLast) {
     if (scrolled < seg.fadeInStart) {
       return 0;
@@ -284,34 +232,20 @@
   }
 
   function render() {
-    if (isComplete) {
-      return;
-    }
-
     var rect = section.getBoundingClientRect();
     var scrolled = clamp(-rect.top, 0, totalRunway);
     var fade = vhToPx(BC_EMPHASIS_FADE_VH);
-    var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
-    var finaleProgress = clamp((scrolled - finaleStart) / finale, 0, 1);
 
     lineEls.forEach(function (el, i) {
       var isLast = i === lineEls.length - 1;
-      var opacity = Math.max(soloOpacity(segments[i], scrolled, fade, isLast), finaleProgress);
+      var opacity = soloOpacity(segments[i], scrolled, fade, isLast);
       el.style.opacity = opacity;
       el.style.transform = "translateY(" + (1 - opacity) * 18 + "px)";
     });
-
-    if (finaleProgress >= 1) {
-      isComplete = true;
-      lineEls.forEach(function (el) {
-        el.style.opacity = 1;
-        el.style.transform = "none";
-      });
-    }
   }
 
   function onScroll() {
-    if (ticking || isComplete) {
+    if (ticking) {
       return;
     }
     ticking = true;
@@ -323,9 +257,6 @@
 
   var resizeTimer = null;
   function onResize() {
-    if (isComplete) {
-      return;
-    }
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(layout, 150);
   }
