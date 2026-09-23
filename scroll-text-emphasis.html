@@ -49,17 +49,20 @@
     position: relative;
     width: 100%;
     max-width: 1240px;
-    height: 68vh;
+    height: 40vh;
     margin: 0 auto;
     padding: 0 24px;
     box-sizing: border-box;
+  }
+
+  .bc-emphasis__stage--flow {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
   }
 
   .bc-emphasis__line {
-    max-width: 720px;
+    max-width: 760px;
     margin: 0;
     font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
     font-weight: 400;
@@ -70,6 +73,7 @@
     transform: translateY(18px);
     will-change: opacity, transform;
   }
+
 
   .bc-emphasis--reduced-motion .bc-emphasis__line {
     opacity: 1;
@@ -82,7 +86,6 @@
 
   @media (max-width: 640px) {
     .bc-emphasis__stage {
-      height: 74vh;
       padding: 0 20px;
     }
 
@@ -97,7 +100,7 @@
 <section class="bc-emphasis" id="bc-emphasis">
   <div class="bc-emphasis__pin">
     <div class="bc-emphasis__scrim"></div>
-    <div class="bc-emphasis__stage" id="bc-emphasis-stage"></div>
+    <div class="bc-emphasis__stage bc-emphasis__stage--flow" id="bc-emphasis-stage"></div>
   </div>
 </section>
 
@@ -125,6 +128,10 @@
      paragraph in or out (the middle portion in between is a hold
      at full brightness).
 
+     BC_EMPHASIS_GAP_VH — a blank pause, with nothing visible, between
+     one paragraph finishing its fade-out and the next starting its
+     fade-in, so they never overlap.
+
      BC_EMPHASIS_FINALE_VH — scroll distance for the closing beat
      where every paragraph settles to full brightness together,
      right after the last paragraph's turn.
@@ -138,9 +145,11 @@
 
   var BC_EMPHASIS_BG_IMAGE = "https://github.com/shanel-broward/broward.church.website/blob/claude/elementor-scroll-text-emphasis-0ugqbh/images/background%20below%20hero%20(1).png?raw=true"; // TODO: once this branch is merged, re-upload this image to the WordPress Media Library and swap in that URL instead — a GitHub branch URL isn't a stable long-term host
   var BC_EMPHASIS_SCRIM_OPACITY = 0.18;
-  var BC_EMPHASIS_DWELL_VH = 90;
+  var BC_EMPHASIS_DWELL_VH = 80;
   var BC_EMPHASIS_FADE_VH = 22;
+  var BC_EMPHASIS_GAP_VH = 16;
   var BC_EMPHASIS_FINALE_VH = 70;
+  var BC_EMPHASIS_RANDOM_BREAKPOINT = 640; // below this width, paragraphs stack normally instead of scattering randomly
 
   /* ============================================================
      DO NOT EDIT BELOW THIS LINE — pin/scroll logic
@@ -174,34 +183,102 @@
     return (vh / 100) * window.innerHeight;
   }
 
+  function positionLines() {
+    var isRandom = window.innerWidth > BC_EMPHASIS_RANDOM_BREAKPOINT;
+    stage.classList.toggle("bc-emphasis__stage--flow", !isRandom);
+
+    if (!isRandom) {
+      lineEls.forEach(function (el) {
+        el.style.position = "";
+        el.style.top = "";
+        el.style.left = "";
+      });
+      return;
+    }
+
+    // Measure each line in normal flow first, so its real wrapped
+    // height (which depends on its own text length, at the current
+    // viewport width) is known before it's placed absolutely.
+    lineEls.forEach(function (el) {
+      el.style.position = "static";
+      el.style.top = "";
+      el.style.left = "";
+    });
+
+    var stageRect = stage.getBoundingClientRect();
+    var heights = lineEls.map(function (el) {
+      return el.getBoundingClientRect().height;
+    });
+    var totalHeight = heights.reduce(function (sum, h) { return sum + h; }, 0);
+    var slack = Math.max(0, stageRect.height - totalHeight);
+
+    // Split the leftover vertical space into random-sized gaps placed
+    // ahead of each line, so lines still land top-to-bottom in order
+    // but with organic, varying spacing — and can never overlap each
+    // other once every line is visible together at the finale.
+    var gapShares = lineEls.map(function () { return Math.random(); });
+    var shareTotal = gapShares.reduce(function (sum, s) { return sum + s; }, 0) || 1;
+
+    var cursor = 0;
+    lineEls.forEach(function (el, i) {
+      cursor += (gapShares[i] / shareTotal) * slack;
+
+      var leftRange = Math.max(0, stageRect.width - el.getBoundingClientRect().width);
+      var left = Math.random() * leftRange;
+
+      el.style.position = "absolute";
+      el.style.top = cursor + "px";
+      el.style.left = left + "px";
+
+      cursor += heights[i];
+    });
+  }
+
   var isComplete = false;
   var totalRunway = 0;
+  var segments = [];
+  var finaleStart = 0;
   var ticking = false;
 
   function layout() {
+    positionLines();
+
     var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var gap = vhToPx(BC_EMPHASIS_GAP_VH);
     var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
-    totalRunway = dwell * lineEls.length + finale;
+
+    var cursor = 0;
+    segments = lineEls.map(function (el, i) {
+      var isLast = i === lineEls.length - 1;
+      var seg = {
+        fadeInStart: cursor,
+        fadeInEnd: cursor + fade,
+        holdEnd: isLast ? null : cursor + dwell - fade,
+        fadeOutEnd: isLast ? null : cursor + dwell
+      };
+      cursor += dwell + (isLast ? 0 : gap);
+      return seg;
+    });
+    finaleStart = cursor;
+    totalRunway = finaleStart + finale;
+
     section.style.height = (window.innerHeight + totalRunway) + "px";
     render();
   }
 
-  function soloOpacity(index, scrolled, dwell, fade) {
-    var start = index * dwell;
-    var end = start + dwell;
-    var isLast = index === lineEls.length - 1;
-
-    if (scrolled < start) {
+  function soloOpacity(seg, scrolled, fade, isLast) {
+    if (scrolled < seg.fadeInStart) {
       return 0;
     }
-    if (scrolled < start + fade) {
-      return (scrolled - start) / fade;
+    if (scrolled < seg.fadeInEnd) {
+      return (scrolled - seg.fadeInStart) / fade;
     }
-    if (isLast || scrolled < end - fade) {
+    if (isLast || scrolled < seg.holdEnd) {
       return 1;
     }
-    if (scrolled < end) {
-      return 1 - (scrolled - (end - fade)) / fade;
+    if (scrolled < seg.fadeOutEnd) {
+      return 1 - (scrolled - seg.holdEnd) / fade;
     }
     return 0;
   }
@@ -213,14 +290,13 @@
 
     var rect = section.getBoundingClientRect();
     var scrolled = clamp(-rect.top, 0, totalRunway);
-    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
     var fade = vhToPx(BC_EMPHASIS_FADE_VH);
     var finale = vhToPx(BC_EMPHASIS_FINALE_VH);
-    var finaleStart = dwell * lineEls.length;
     var finaleProgress = clamp((scrolled - finaleStart) / finale, 0, 1);
 
     lineEls.forEach(function (el, i) {
-      var opacity = Math.max(soloOpacity(i, scrolled, dwell, fade), finaleProgress);
+      var isLast = i === lineEls.length - 1;
+      var opacity = Math.max(soloOpacity(segments[i], scrolled, fade, isLast), finaleProgress);
       el.style.opacity = opacity;
       el.style.transform = "translateY(" + (1 - opacity) * 18 + "px)";
     });
