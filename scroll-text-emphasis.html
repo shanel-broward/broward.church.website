@@ -12,13 +12,16 @@
      standalone testing.
 
      Behavior: the section becomes temporarily fixed (sticky) once
-     it fills the viewport. Each paragraph fades in centered in the
-     container, holds, then fades out as the next one fades in.
-     After the last paragraph, the section unpins and the page
-     continues scrolling normally. Scrolling back up reverses the
-     same sequence: paragraphs fade in and out again in reverse
-     order, since each one's opacity is just a function of scroll
-     position — there's no separate "reset" needed.
+     it fills the viewport. Each paragraph (a "beat") fades in
+     centered in the container, holds, then fades out as the next
+     one fades in. The last beat can instead be a "combo": a fixed
+     line plus a second line that cross-fades through a list of
+     phrases to complete the sentence a few different ways, before
+     holding on the last one. After the last beat, the section
+     unpins and the page continues scrolling normally. Scrolling
+     back up reverses the same sequence — including the phrase
+     cross-fades — since everything is just a function of scroll
+     position; there's no separate "reset" needed.
      ============================================================ */
 
   .bc-emphasis {
@@ -58,19 +61,43 @@
     place-items: center;
   }
 
-  .bc-emphasis__line {
+  .bc-emphasis__line,
+  .bc-emphasis__combo {
     grid-area: 1 / 1;
-    max-width: 760px;
-    margin: 0;
-    font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
-    font-weight: 400;
-    font-size: clamp(26px, 3.1vw, 38px);
-    line-height: 1.4;
-    color: #ffffff;
-    text-align: center;
     opacity: 0;
     transform: translateY(18px);
     will-change: opacity, transform;
+  }
+
+  .bc-emphasis__line,
+  .bc-emphasis__combo-fixed,
+  .bc-emphasis__combo-option {
+    max-width: 800px;
+    margin: 0;
+    font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: clamp(34px, 4vw, 49px);
+    line-height: 1.4;
+    color: #ffffff;
+    text-align: center;
+  }
+
+  .bc-emphasis__combo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15em;
+  }
+
+  .bc-emphasis__combo-cycle {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .bc-emphasis__combo-option {
+    grid-area: 1 / 1;
+    opacity: 0;
   }
 
   .bc-emphasis--reduced-motion .bc-emphasis__pin {
@@ -88,9 +115,21 @@
     padding-bottom: 64px;
   }
 
-  .bc-emphasis--reduced-motion .bc-emphasis__line {
+  .bc-emphasis--reduced-motion .bc-emphasis__line,
+  .bc-emphasis--reduced-motion .bc-emphasis__combo {
     opacity: 1;
     transform: none;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__combo-cycle {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__combo-option {
+    position: static;
+    opacity: 1;
   }
 
   @media (max-width: 640px) {
@@ -98,7 +137,9 @@
       padding: 0 20px;
     }
 
-    .bc-emphasis__line {
+    .bc-emphasis__line,
+    .bc-emphasis__combo-fixed,
+    .bc-emphasis__combo-option {
       max-width: 100%;
     }
   }
@@ -118,8 +159,15 @@
   /* ============================================================
      EDIT HERE.
 
-     BC_EMPHASIS_LINES — the paragraphs, in the order they should
-     appear as you scroll down.
+     BC_EMPHASIS_BEATS — the sequence shown as you scroll down. Each
+     entry is either:
+       - a plain string: one paragraph that fades in, holds, and
+         fades out as usual, or
+       - an object {fixed, options}: a fixed line that stays put,
+         plus a second line below it that cross-fades through each
+         string in `options` (in order) to complete the sentence a
+         few different ways, holding on the last option once the
+         cycle finishes.
 
      BC_EMPHASIS_BG_IMAGE — URL of the background image you
      uploaded to the WordPress Media Library (right-click the image
@@ -140,12 +188,24 @@
      BC_EMPHASIS_GAP_VH — a blank pause, with nothing visible, between
      one paragraph finishing its fade-out and the next starting its
      fade-in, so they never overlap.
+
+     BC_EMPHASIS_CYCLE_DWELL_VH / _CYCLE_FADE_VH / _CYCLE_GAP_VH — the
+     same three ideas, but for the looping phrases inside a "combo"
+     entry's second line.
      ============================================================ */
 
-  var BC_EMPHASIS_LINES = [
+  var BC_EMPHASIS_BEATS = [
     "In a world filled with noise, the influence of culture can easily become the loudest voice we hear.",
     "So we've tuned our ears as a church to answer the call of one clear mission:",
-    "We are not building a club for consumers; we are building a city on a hill."
+    "We are not building a club for consumers; we are building a city on a hill.",
+    {
+      fixed: "We exist to fulfill the vision of Jesus, and Jesus envisions a people who",
+      options: [
+        "lose themselves to find their identity in Him.",
+        "reject the world in favor of His Kingdom.",
+        "bring the healing power of His Gospel to the world."
+      ]
+    }
   ];
 
   var BC_EMPHASIS_BG_IMAGE = "https://github.com/shanel-broward/broward.church.website/blob/claude/elementor-scroll-text-emphasis-0ugqbh/images/background%20below%20hero%20(1).png?raw=true"; // TODO: once this branch is merged, re-upload this image to the WordPress Media Library and swap in that URL instead — a GitHub branch URL isn't a stable long-term host
@@ -153,6 +213,9 @@
   var BC_EMPHASIS_DWELL_VH = 80;
   var BC_EMPHASIS_FADE_VH = 22;
   var BC_EMPHASIS_GAP_VH = 16;
+  var BC_EMPHASIS_CYCLE_DWELL_VH = 55;
+  var BC_EMPHASIS_CYCLE_FADE_VH = 16;
+  var BC_EMPHASIS_CYCLE_GAP_VH = 10;
 
   /* ============================================================
      DO NOT EDIT BELOW THIS LINE — pin/scroll logic
@@ -166,13 +229,29 @@
 
   var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  stage.innerHTML = BC_EMPHASIS_LINES.map(function (text, i) {
-    return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + text + "</p>";
+  stage.innerHTML = BC_EMPHASIS_BEATS.map(function (beat, i) {
+    if (typeof beat === "string") {
+      return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + beat + "</p>";
+    }
+    var optionsHtml = beat.options.map(function (text, j) {
+      return '<p class="bc-emphasis__combo-option" data-bc-cycle-index="' + j + '">' + text + "</p>";
+    }).join("");
+    return (
+      '<div class="bc-emphasis__combo" data-bc-emphasis-index="' + i + '">' +
+        '<p class="bc-emphasis__combo-fixed">' + beat.fixed + "</p>" +
+        '<div class="bc-emphasis__combo-cycle">' + optionsHtml + "</div>" +
+      "</div>"
+    );
   }).join("");
 
-  var lineEls = Array.prototype.slice.call(stage.querySelectorAll(".bc-emphasis__line"));
+  var beats = Array.prototype.slice.call(stage.children).map(function (el) {
+    var optionEls = el.classList.contains("bc-emphasis__combo")
+      ? Array.prototype.slice.call(el.querySelectorAll(".bc-emphasis__combo-option"))
+      : null;
+    return { el: el, optionEls: optionEls };
+  });
 
-  if (prefersReducedMotion || lineEls.length === 0) {
+  if (prefersReducedMotion || beats.length === 0) {
     section.classList.add("bc-emphasis--reduced-motion");
     return;
   }
@@ -185,44 +264,39 @@
     return (vh / 100) * window.innerHeight;
   }
 
-  var totalRunway = 0;
-  var segments = [];
-  var ticking = false;
-
-  function layout() {
-    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
-    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
-    var gap = vhToPx(BC_EMPHASIS_GAP_VH);
-
-    var cursor = 0;
-    segments = lineEls.map(function (el, i) {
-      var isLast = i === lineEls.length - 1;
-      var seg = {
+  // Lays out `count` items back-to-back starting at `offset`, each
+  // getting a fade-in, a hold, and (except the last) a fade-out
+  // before a blank `gap` leads into the next one. Used both for the
+  // top-level beats and, nested, for a combo's looping phrases — so
+  // both cross-fade the same way and are reversible the same way.
+  function buildSegments(count, dwell, fade, gap, offset) {
+    var cursor = offset;
+    var segs = [];
+    for (var i = 0; i < count; i++) {
+      var isLast = i === count - 1;
+      segs.push({
         fadeInStart: cursor,
         fadeInEnd: cursor + fade,
         holdEnd: isLast ? null : cursor + dwell - fade,
-        fadeOutEnd: isLast ? null : cursor + dwell
-      };
+        fadeOutEnd: isLast ? null : cursor + dwell,
+        isLast: isLast
+      });
       cursor += dwell + (isLast ? 0 : gap);
-      return seg;
-    });
-    totalRunway = cursor;
-
-    section.style.height = (window.innerHeight + totalRunway) + "px";
-    render();
+    }
+    return { segments: segs, end: cursor };
   }
 
   // A pure function of scroll position, so it's naturally reversible:
-  // scrolling down plays a line's fade-in/hold/fade-out forward,
+  // scrolling down plays a segment's fade-in/hold/fade-out forward,
   // scrolling back up plays the same curve backward.
-  function soloOpacity(seg, scrolled, fade, isLast) {
+  function opacityAt(seg, scrolled, fade) {
     if (scrolled < seg.fadeInStart) {
       return 0;
     }
     if (scrolled < seg.fadeInEnd) {
       return (scrolled - seg.fadeInStart) / fade;
     }
-    if (isLast || scrolled < seg.holdEnd) {
+    if (seg.isLast || scrolled < seg.holdEnd) {
       return 1;
     }
     if (scrolled < seg.fadeOutEnd) {
@@ -231,16 +305,77 @@
     return 0;
   }
 
+  var totalRunway = 0;
+  var segments = [];
+  var cycleSegments = [];
+  var ticking = false;
+
+  function layout() {
+    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var gap = vhToPx(BC_EMPHASIS_GAP_VH);
+    var cycleDwell = vhToPx(BC_EMPHASIS_CYCLE_DWELL_VH);
+    var cycleFade = vhToPx(BC_EMPHASIS_CYCLE_FADE_VH);
+    var cycleGap = vhToPx(BC_EMPHASIS_CYCLE_GAP_VH);
+
+    var cursor = 0;
+    segments = [];
+    cycleSegments = [];
+
+    beats.forEach(function (beat, i) {
+      var isLast = i === beats.length - 1;
+      var isCombo = !!beat.optionEls;
+
+      // A combo beat needs enough dwell to fade itself in, then run
+      // its whole phrase cycle (which stands in for the "hold"), then
+      // fade itself out — except when it's the last beat, where it
+      // just holds on the final phrase instead of fading out.
+      var beatDwell = dwell;
+      if (isCombo) {
+        var cycleRunway = buildSegments(beat.optionEls.length, cycleDwell, cycleFade, cycleGap, 0).end;
+        beatDwell = isLast ? (fade + cycleRunway) : (fade * 2 + cycleRunway);
+      }
+
+      var seg = {
+        fadeInStart: cursor,
+        fadeInEnd: cursor + fade,
+        holdEnd: isLast ? null : cursor + beatDwell - fade,
+        fadeOutEnd: isLast ? null : cursor + beatDwell,
+        isLast: isLast
+      };
+      segments.push(seg);
+
+      // The phrase cycle starts right as the combo's own fade-in
+      // finishes, so the fixed line settles in first.
+      cycleSegments.push(isCombo
+        ? buildSegments(beat.optionEls.length, cycleDwell, cycleFade, cycleGap, seg.fadeInEnd).segments
+        : null);
+
+      cursor += beatDwell + (isLast ? 0 : gap);
+    });
+
+    totalRunway = cursor;
+
+    section.style.height = (window.innerHeight + totalRunway) + "px";
+    render();
+  }
+
   function render() {
     var rect = section.getBoundingClientRect();
     var scrolled = clamp(-rect.top, 0, totalRunway);
     var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var cycleFade = vhToPx(BC_EMPHASIS_CYCLE_FADE_VH);
 
-    lineEls.forEach(function (el, i) {
-      var isLast = i === lineEls.length - 1;
-      var opacity = soloOpacity(segments[i], scrolled, fade, isLast);
-      el.style.opacity = opacity;
-      el.style.transform = "translateY(" + (1 - opacity) * 18 + "px)";
+    beats.forEach(function (beat, i) {
+      var opacity = opacityAt(segments[i], scrolled, fade);
+      beat.el.style.opacity = opacity;
+      beat.el.style.transform = "translateY(" + (1 - opacity) * 18 + "px)";
+
+      if (beat.optionEls) {
+        beat.optionEls.forEach(function (optEl, j) {
+          optEl.style.opacity = opacityAt(cycleSegments[i][j], scrolled, cycleFade);
+        });
+      }
     });
   }
 
