@@ -14,12 +14,12 @@
      Behavior: the section becomes temporarily fixed (sticky) once
      it fills the viewport. Each paragraph (a "beat") fades in
      centered in the container, holds, then fades out as the next
-     one fades in. A "combo" entry expands into several beats that
-     all start with the same fixed lead-in text and each end with a
-     different phrase — so the phrase after the lead-in just flows
-     and wraps naturally as part of one sentence, cross-fading
-     between endings before holding on the last one. After the last
-     beat, the section unpins and the page continues scrolling
+     one fades in. A "combo" beat instead has a fixed lead-in phrase
+     that, once revealed, stays put at full opacity for good — and a
+     second inline chunk of text right after it (in the same
+     sentence, wrapping naturally) that independently cross-fades
+     through a list of endings, holding on the last one. After the
+     last beat, the section unpins and the page continues scrolling
      normally. Scrolling back up reverses the same sequence — since
      everything is just a function of scroll position; there's no
      separate "reset" needed.
@@ -80,6 +80,14 @@
     text-align: center;
   }
 
+  /* A combo beat's cross-fading ending. Its opacity is animated on
+     its own, independently of the fixed lead-in text next to it, so
+     the lead-in is never dimmed by the ending's transitions. */
+  .bc-emphasis__cycle {
+    opacity: 0;
+    will-change: opacity;
+  }
+
   .bc-emphasis--reduced-motion .bc-emphasis__pin {
     position: relative;
     height: auto;
@@ -130,12 +138,13 @@
      entry is either:
        - a plain string: one paragraph that fades in, holds, and
          fades out as usual, or
-       - an object {fixed, options}: expands into one beat per
-         string in `options`, each being "`fixed` `option`" as one
-         continuous sentence — so the ending just wraps naturally
-         after the fixed lead-in, rather than starting on its own
-         line. These use the faster BC_EMPHASIS_CYCLE_* pacing below
-         and hold on the last option once the cycle finishes.
+       - an object {fixed, options}: a "combo" beat. `fixed` fades in
+         once and then stays fully visible for good. Right after it,
+         in the same sentence, a second stretch of text cross-fades
+         through each string in `options` (in order) — wrapping
+         naturally wherever it lands, never forced onto its own new
+         line — using the faster BC_EMPHASIS_CYCLE_* pacing below,
+         and holding on the last option once the cycle finishes.
 
      BC_EMPHASIS_BG_IMAGE — URL of the background image you
      uploaded to the WordPress Media Library (right-click the image
@@ -166,7 +175,7 @@
     "So we've tuned our ears as a church to answer the call of one clear mission:",
     "We are not building a club for consumers; we are building a city on a hill.",
     {
-      fixed: "We exist to fulfill the vision of Jesus, and Jesus envisions a people&nbsp;who",
+      fixed: "We exist to fulfill the vision of Jesus, and Jesus envisions a people&nbsp;who ",
       options: [
         "lose themselves to find their identity in Him.",
         "reject the world in favor of His Kingdom.",
@@ -196,32 +205,49 @@
 
   var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Flatten BC_EMPHASIS_BEATS into one beat per paragraph, each
-  // carrying its own pacing — a "combo" entry becomes one beat per
-  // option, sharing its fixed lead-in text as part of one sentence.
-  var beatsData = [];
-  BC_EMPHASIS_BEATS.forEach(function (beat) {
+  if (prefersReducedMotion) {
+    // Motion doesn't matter here, but completeness does: show every
+    // combo ending as its own plain, readable sentence.
+    stage.innerHTML = BC_EMPHASIS_BEATS.map(function (beat) {
+      if (typeof beat === "string") {
+        return '<p class="bc-emphasis__line">' + beat + "</p>";
+      }
+      return beat.options.map(function (option) {
+        return '<p class="bc-emphasis__line">' + beat.fixed + option + "</p>";
+      }).join("");
+    }).join("");
+    section.classList.add("bc-emphasis--reduced-motion");
+    return;
+  }
+
+  // One beat per top-level entry. A combo beat additionally tracks
+  // its cycle span plus its own nested per-option segments.
+  var beats = BC_EMPHASIS_BEATS.map(function (beat) {
     if (typeof beat === "string") {
-      beatsData.push({ text: beat, dwellVh: BC_EMPHASIS_DWELL_VH, fadeVh: BC_EMPHASIS_FADE_VH, gapVh: BC_EMPHASIS_GAP_VH });
-    } else {
-      beat.options.forEach(function (option) {
-        beatsData.push({
-          text: beat.fixed + " " + option,
-          dwellVh: BC_EMPHASIS_CYCLE_DWELL_VH,
-          fadeVh: BC_EMPHASIS_CYCLE_FADE_VH,
-          gapVh: BC_EMPHASIS_CYCLE_GAP_VH
-        });
-      });
+      return { text: beat };
     }
+    return { fixed: beat.fixed, options: beat.options };
   });
 
-  stage.innerHTML = beatsData.map(function (b, i) {
-    return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + b.text + "</p>";
+  stage.innerHTML = beats.map(function (beat, i) {
+    if (beat.text) {
+      return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + beat.text + "</p>";
+    }
+    return (
+      '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' +
+        beat.fixed +
+        '<span class="bc-emphasis__cycle">' + beat.options[0] + "</span>" +
+      "</p>"
+    );
   }).join("");
 
   var beatEls = Array.prototype.slice.call(stage.children);
+  beats.forEach(function (beat, i) {
+    beat.el = beatEls[i];
+    beat.cycleEl = beat.options ? beatEls[i].querySelector(".bc-emphasis__cycle") : null;
+  });
 
-  if (prefersReducedMotion || beatEls.length === 0) {
+  if (beatEls.length === 0) {
     section.classList.add("bc-emphasis--reduced-motion");
     return;
   }
@@ -234,8 +260,29 @@
     return (vh / 100) * window.innerHeight;
   }
 
+  // Lays out `count` items back-to-back starting at `offset`, each
+  // getting a fade-in, a hold, and (except the last) a fade-out
+  // before a blank `gap` leads into the next one.
+  function buildSegments(count, dwell, fade, gap, offset) {
+    var cursor = offset;
+    var segs = [];
+    for (var i = 0; i < count; i++) {
+      var isLast = i === count - 1;
+      segs.push({
+        fadeInStart: cursor,
+        fadeInEnd: cursor + fade,
+        holdEnd: isLast ? null : cursor + dwell - fade,
+        fadeOutEnd: isLast ? null : cursor + dwell,
+        isLast: isLast,
+        fade: fade
+      });
+      cursor += dwell + (isLast ? 0 : gap);
+    }
+    return { segments: segs, end: cursor };
+  }
+
   // A pure function of scroll position, so it's naturally reversible:
-  // scrolling down plays a beat's fade-in/hold/fade-out forward,
+  // scrolling down plays a segment's fade-in/hold/fade-out forward,
   // scrolling back up plays the same curve backward.
   function opacityAt(seg, scrolled) {
     if (scrolled < seg.fadeInStart) {
@@ -254,25 +301,46 @@
   }
 
   var totalRunway = 0;
-  var segments = [];
   var ticking = false;
 
   function layout() {
+    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var gap = vhToPx(BC_EMPHASIS_GAP_VH);
+    var cycleDwell = vhToPx(BC_EMPHASIS_CYCLE_DWELL_VH);
+    var cycleFade = vhToPx(BC_EMPHASIS_CYCLE_FADE_VH);
+    var cycleGap = vhToPx(BC_EMPHASIS_CYCLE_GAP_VH);
+
     var cursor = 0;
-    segments = beatsData.map(function (b, i) {
-      var isLast = i === beatsData.length - 1;
-      var dwell = vhToPx(b.dwellVh);
-      var fade = vhToPx(b.fadeVh);
-      var seg = {
+    beats.forEach(function (beat, i) {
+      var isLast = i === beats.length - 1;
+
+      // A combo beat needs enough dwell for its own one-time reveal
+      // fade-in, then room for its whole ending cycle (which stands
+      // in for the "hold"), then a fade-out — except when it's the
+      // last beat, where it just holds instead of fading out.
+      var beatDwell = dwell;
+      if (beat.options) {
+        var cycleRunway = buildSegments(beat.options.length, cycleDwell, cycleFade, cycleGap, 0).end;
+        beatDwell = isLast ? (fade + cycleRunway) : (fade * 2 + cycleRunway);
+      }
+
+      beat.seg = {
         fadeInStart: cursor,
         fadeInEnd: cursor + fade,
-        holdEnd: isLast ? null : cursor + dwell - fade,
-        fadeOutEnd: isLast ? null : cursor + dwell,
+        holdEnd: isLast ? null : cursor + beatDwell - fade,
+        fadeOutEnd: isLast ? null : cursor + beatDwell,
         isLast: isLast,
         fade: fade
       };
-      cursor += dwell + (isLast ? 0 : vhToPx(b.gapVh));
-      return seg;
+
+      // The ending's own cycle starts right as the beat's fade-in
+      // finishes, so the fixed lead-in settles in first.
+      if (beat.options) {
+        beat.cycleSegments = buildSegments(beat.options.length, cycleDwell, cycleFade, cycleGap, beat.seg.fadeInEnd).segments;
+      }
+
+      cursor += beatDwell + (isLast ? 0 : gap);
     });
     totalRunway = cursor;
 
@@ -284,8 +352,28 @@
     var rect = section.getBoundingClientRect();
     var scrolled = clamp(-rect.top, 0, totalRunway);
 
-    beatEls.forEach(function (el, i) {
-      el.style.opacity = opacityAt(segments[i], scrolled);
+    beats.forEach(function (beat) {
+      beat.el.style.opacity = opacityAt(beat.seg, scrolled);
+
+      if (!beat.options) {
+        return;
+      }
+
+      // At most one option's segment is ever non-zero at a time (the
+      // gaps between them guarantee that), so find it and show it —
+      // the fixed lead-in text right before it is never touched.
+      var shown = false;
+      beat.cycleSegments.forEach(function (seg, j) {
+        var opacity = opacityAt(seg, scrolled);
+        if (opacity > 0) {
+          beat.cycleEl.textContent = beat.options[j];
+          beat.cycleEl.style.opacity = opacity;
+          shown = true;
+        }
+      });
+      if (!shown) {
+        beat.cycleEl.style.opacity = 0;
+      }
     });
   }
 
