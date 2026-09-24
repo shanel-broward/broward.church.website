@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scroll Text Emphasis</title>
+<style>
+  /* ============================================================
+     bc-emphasis — Pinned scroll-emphasis text section
+     Self-contained: paste the full <body> contents into an
+     Elementor "HTML" widget, or embed the whole file for
+     standalone testing.
+
+     Behavior: the section becomes temporarily fixed (sticky) once
+     it fills the viewport. Each paragraph (a "beat") fades in
+     centered in the container, holds, then fades out as the next
+     one fades in. A "combo" beat instead has a fixed lead-in phrase
+     that, once revealed, stays put at full opacity for good — and a
+     second inline chunk of text right after it (in the same
+     sentence, wrapping naturally) that independently cross-fades
+     through a list of endings, holding on the last one. After the
+     last beat, the section unpins and the page continues scrolling
+     normally. Scrolling back up reverses the same sequence — since
+     everything is just a function of scroll position; there's no
+     separate "reset" needed.
+     ============================================================ */
+
+  .bc-emphasis {
+    position: relative;
+    background-color: #4B6B60; /* matches the pin's own fallback, in case content ever spills past its box */
+  }
+
+  .bc-emphasis__pin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #4B6B60; /* fallback color while the image loads */
+    background-image: var(--bc-emphasis-bg);
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bc-emphasis__scrim {
+    position: absolute;
+    inset: 0;
+    background-color: #000000;
+    opacity: var(--bc-emphasis-scrim-opacity, 0.18);
+    pointer-events: none;
+  }
+
+  .bc-emphasis__stage {
+    /* Anchored so every beat's first line always starts at the same
+       spot — 40% down the viewport on desktop, 25% on mobile (see
+       the max-width:640px block below) — regardless of how many
+       lines that particular beat wraps to. Extra lines grow downward
+       instead of the whole block shifting to stay centered. */
+    position: absolute;
+    top: 40%;
+    left: 0;
+    right: 0;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 100px;
+    box-sizing: border-box;
+    display: grid;
+    place-items: start center;
+  }
+
+  .bc-emphasis__line {
+    grid-area: 1 / 1;
+    opacity: 0;
+    will-change: opacity;
+    margin: 0;
+    font-family: "Neue Haas Grotesk Display", "Neue Haas Grotesk", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: clamp(34px, 4vw, 49px);
+    line-height: 1.4;
+    color: #ffffff;
+    text-align: center;
+  }
+
+  /* A combo beat's cross-fading ending. Its opacity is animated on
+     its own, independently of the fixed lead-in text next to it, so
+     the lead-in is never dimmed by the ending's transitions. */
+  .bc-emphasis__cycle {
+    opacity: 0;
+    will-change: opacity;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__pin {
+    position: relative;
+    height: auto;
+    overflow: visible;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__stage {
+    position: static;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  .bc-emphasis--reduced-motion .bc-emphasis__line {
+    opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    .bc-emphasis__stage {
+      top: 15%;
+      padding: 0 20px;
+    }
+
+    .bc-emphasis__line {
+      font-size: 40px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<section class="bc-emphasis" id="bc-emphasis">
+  <div class="bc-emphasis__pin">
+    <div class="bc-emphasis__scrim"></div>
+    <div class="bc-emphasis__stage" id="bc-emphasis-stage"></div>
+  </div>
+</section>
+
+<script>
+(function () {
+  /* ============================================================
+     EDIT HERE.
+
+     BC_EMPHASIS_BEATS — the sequence shown as you scroll down. Each
+     entry is either:
+       - a plain string: one paragraph that fades in, holds, and
+         fades out as usual, or
+       - an object {fixed, options}: a "combo" beat. `fixed` fades in
+         once and then stays fully visible for good. Right after it,
+         in the same sentence, a second stretch of text cross-fades
+         through each string in `options` (in order) — wrapping
+         naturally wherever it lands, never forced onto its own new
+         line — using the faster BC_EMPHASIS_CYCLE_* pacing below,
+         and holding on the last option once the cycle finishes.
+
+     BC_EMPHASIS_BG_IMAGE — URL of the background image you
+     uploaded to the WordPress Media Library (right-click the image
+     in the Media Library and copy its URL).
+
+     BC_EMPHASIS_SCRIM_OPACITY — a black overlay (0 to 1) drawn over
+     the image to keep the white text readable. Raise it if the
+     text is hard to read on a bright image; set to 0 to turn it off.
+
+     BC_EMPHASIS_DWELL_VH — how much scroll distance (in "vh", i.e.
+     viewport heights) each paragraph gets to itself before the
+     next one takes its turn. Bigger = slower/lazier scroll pacing.
+
+     BC_EMPHASIS_FADE_VH — how much of that dwell is spent fading a
+     paragraph in or out (the middle portion in between is a hold
+     at full brightness).
+
+     BC_EMPHASIS_GAP_VH — a blank pause, with nothing visible, between
+     one paragraph finishing its fade-out and the next starting its
+     fade-in, so they never overlap.
+
+     BC_EMPHASIS_CYCLE_DWELL_VH / _CYCLE_FADE_VH / _CYCLE_GAP_VH — the
+     same three ideas, but for the beats a "combo" entry expands into.
+     ============================================================ */
+
+  var BC_EMPHASIS_BEATS = [
+    "In a world filled with noise, the influence of culture can easily become the loudest voice we hear.",
+    "So we've tuned our ears as a church to answer the call of one clear mission:",
+    "We are not building a club for consumers; we are building a city on a hill.",
+    {
+      fixed: "We exist to fulfill the vision of Jesus, and Jesus envisions a people&nbsp;who ",
+      options: [
+        "lose themselves to find their identity in Him.",
+        "reject the world in favor of His Kingdom.",
+        "bring the healing power of His Gospel to the world."
+      ]
+    }
+  ];
+
+  var BC_EMPHASIS_BG_IMAGE = "https://github.com/shanel-broward/broward.church.website/blob/claude/elementor-scroll-text-emphasis-0ugqbh/images/background%20below%20hero%20(1).png?raw=true"; // TODO: once this branch is merged, re-upload this image to the WordPress Media Library and swap in that URL instead — a GitHub branch URL isn't a stable long-term host
+  var BC_EMPHASIS_SCRIM_OPACITY = 0.18;
+  var BC_EMPHASIS_DWELL_VH = 80;
+  var BC_EMPHASIS_FADE_VH = 22;
+  var BC_EMPHASIS_GAP_VH = 16;
+  var BC_EMPHASIS_CYCLE_DWELL_VH = 55;
+  var BC_EMPHASIS_CYCLE_FADE_VH = 16;
+  var BC_EMPHASIS_CYCLE_GAP_VH = 10;
+
+  /* ============================================================
+     DO NOT EDIT BELOW THIS LINE — pin/scroll logic
+     ============================================================ */
+
+  var section = document.getElementById("bc-emphasis");
+  var stage = document.getElementById("bc-emphasis-stage");
+
+  section.style.setProperty("--bc-emphasis-bg", 'url("' + BC_EMPHASIS_BG_IMAGE + '")');
+  section.style.setProperty("--bc-emphasis-scrim-opacity", BC_EMPHASIS_SCRIM_OPACITY);
+
+  var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (prefersReducedMotion) {
+    // Motion doesn't matter here, but completeness does: show every
+    // combo ending as its own plain, readable sentence.
+    stage.innerHTML = BC_EMPHASIS_BEATS.map(function (beat) {
+      if (typeof beat === "string") {
+        return '<p class="bc-emphasis__line">' + beat + "</p>";
+      }
+      return beat.options.map(function (option) {
+        return '<p class="bc-emphasis__line">' + beat.fixed + option + "</p>";
+      }).join("");
+    }).join("");
+    section.classList.add("bc-emphasis--reduced-motion");
+    return;
+  }
+
+  // One beat per top-level entry. A combo beat additionally tracks
+  // its cycle span plus its own nested per-option segments.
+  var beats = BC_EMPHASIS_BEATS.map(function (beat) {
+    if (typeof beat === "string") {
+      return { text: beat };
+    }
+    return { fixed: beat.fixed, options: beat.options };
+  });
+
+  stage.innerHTML = beats.map(function (beat, i) {
+    if (beat.text) {
+      return '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' + beat.text + "</p>";
+    }
+    return (
+      '<p class="bc-emphasis__line" data-bc-emphasis-index="' + i + '">' +
+        beat.fixed +
+        '<span class="bc-emphasis__cycle">' + beat.options[0] + "</span>" +
+      "</p>"
+    );
+  }).join("");
+
+  var beatEls = Array.prototype.slice.call(stage.children);
+  beats.forEach(function (beat, i) {
+    beat.el = beatEls[i];
+    beat.cycleEl = beat.options ? beatEls[i].querySelector(".bc-emphasis__cycle") : null;
+  });
+
+  if (beatEls.length === 0) {
+    section.classList.add("bc-emphasis--reduced-motion");
+    return;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function vhToPx(vh) {
+    return (vh / 100) * window.innerHeight;
+  }
+
+  // Lays out `count` items back-to-back starting at `offset`, each
+  // getting a fade-in, a hold, and (except the last) a fade-out
+  // before a blank `gap` leads into the next one.
+  function buildSegments(count, dwell, fade, gap, offset) {
+    var cursor = offset;
+    var segs = [];
+    for (var i = 0; i < count; i++) {
+      var isLast = i === count - 1;
+      segs.push({
+        fadeInStart: cursor,
+        fadeInEnd: cursor + fade,
+        holdEnd: isLast ? null : cursor + dwell - fade,
+        fadeOutEnd: isLast ? null : cursor + dwell,
+        isLast: isLast,
+        fade: fade
+      });
+      cursor += dwell + (isLast ? 0 : gap);
+    }
+    return { segments: segs, end: cursor };
+  }
+
+  // A pure function of scroll position, so it's naturally reversible:
+  // scrolling down plays a segment's fade-in/hold/fade-out forward,
+  // scrolling back up plays the same curve backward.
+  function opacityAt(seg, scrolled) {
+    if (scrolled < seg.fadeInStart) {
+      return 0;
+    }
+    if (scrolled < seg.fadeInEnd) {
+      return (scrolled - seg.fadeInStart) / seg.fade;
+    }
+    if (seg.isLast || scrolled < seg.holdEnd) {
+      return 1;
+    }
+    if (scrolled < seg.fadeOutEnd) {
+      return 1 - (scrolled - seg.holdEnd) / seg.fade;
+    }
+    return 0;
+  }
+
+  var totalRunway = 0;
+  var ticking = false;
+
+  function layout() {
+    var dwell = vhToPx(BC_EMPHASIS_DWELL_VH);
+    var fade = vhToPx(BC_EMPHASIS_FADE_VH);
+    var gap = vhToPx(BC_EMPHASIS_GAP_VH);
+    var cycleDwell = vhToPx(BC_EMPHASIS_CYCLE_DWELL_VH);
+    var cycleFade = vhToPx(BC_EMPHASIS_CYCLE_FADE_VH);
+    var cycleGap = vhToPx(BC_EMPHASIS_CYCLE_GAP_VH);
+
+    var cursor = 0;
+    beats.forEach(function (beat, i) {
+      var isLast = i === beats.length - 1;
+
+      // A combo beat needs enough dwell for its own one-time reveal
+      // fade-in, then room for its whole ending cycle (which stands
+      // in for the "hold"), then a fade-out — except when it's the
+      // last beat, where it just holds instead of fading out.
+      var beatDwell = dwell;
+      if (beat.options) {
+        var cycleRunway = buildSegments(beat.options.length, cycleDwell, cycleFade, cycleGap, 0).end;
+        beatDwell = isLast ? (fade + cycleRunway) : (fade * 2 + cycleRunway);
+      }
+
+      beat.seg = {
+        fadeInStart: cursor,
+        fadeInEnd: cursor + fade,
+        holdEnd: isLast ? null : cursor + beatDwell - fade,
+        fadeOutEnd: isLast ? null : cursor + beatDwell,
+        isLast: isLast,
+        fade: fade
+      };
+
+      // The ending's own cycle starts right as the beat's fade-in
+      // finishes, so the fixed lead-in settles in first.
+      if (beat.options) {
+        beat.cycleSegments = buildSegments(beat.options.length, cycleDwell, cycleFade, cycleGap, beat.seg.fadeInEnd).segments;
+      }
+
+      cursor += beatDwell + (isLast ? 0 : gap);
+    });
+    totalRunway = cursor;
+
+    section.style.height = (window.innerHeight + totalRunway) + "px";
+    render();
+  }
+
+  function render() {
+    var rect = section.getBoundingClientRect();
+    var scrolled = clamp(-rect.top, 0, totalRunway);
+
+    beats.forEach(function (beat) {
+      beat.el.style.opacity = opacityAt(beat.seg, scrolled);
+
+      if (!beat.options) {
+        return;
+      }
+
+      // At most one option's segment is ever non-zero at a time (the
+      // gaps between them guarantee that), so find it and show it —
+      // the fixed lead-in text right before it is never touched.
+      var shown = false;
+      beat.cycleSegments.forEach(function (seg, j) {
+        var opacity = opacityAt(seg, scrolled);
+        if (opacity > 0) {
+          beat.cycleEl.textContent = beat.options[j];
+          beat.cycleEl.style.opacity = opacity;
+          shown = true;
+        }
+      });
+      if (!shown) {
+        beat.cycleEl.style.opacity = 0;
+      }
+    });
+  }
+
+  function onScroll() {
+    if (ticking) {
+      return;
+    }
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      render();
+      ticking = false;
+    });
+  }
+
+  var resizeTimer = null;
+  function onResize() {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(layout, 150);
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onResize);
+  layout();
+})();
+</script>
+
+</body>
+</html>
