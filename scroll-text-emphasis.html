@@ -26,6 +26,7 @@
 
   .bc-emphasis {
     position: relative;
+    background-color: #4B6B60; /* matches the pin's own fallback, in case content ever spills past its box */
   }
 
   .bc-emphasis__pin {
@@ -135,7 +136,14 @@
 
   @media (max-width: 640px) {
     .bc-emphasis__stage {
+      top: 25%;
       padding: 0 20px;
+    }
+
+    .bc-emphasis__line,
+    .bc-emphasis__combo-fixed,
+    .bc-emphasis__combo-option {
+      font-size: 42.5px; /* 25% larger than the 34px mobile floor of the desktop clamp() */
     }
   }
 </style>
