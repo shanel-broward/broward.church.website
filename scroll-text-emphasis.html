@@ -50,11 +50,12 @@
 
   .bc-emphasis__stage {
     /* Anchored so every beat's first line always starts at the same
-       spot — 25% down the viewport — regardless of how many lines
-       that particular beat wraps to. Extra lines grow downward
+       spot — 40% down the viewport on desktop, 25% on mobile (see
+       the max-width:640px block below) — regardless of how many
+       lines that particular beat wraps to. Extra lines grow downward
        instead of the whole block shifting to stay centered. */
     position: absolute;
-    top: 25%;
+    top: 40%;
     left: 0;
     right: 0;
     width: 100%;
@@ -136,6 +137,7 @@
 
   @media (max-width: 640px) {
     .bc-emphasis__stage {
+      top: 25%;
       padding: 0 20px;
     }
 
